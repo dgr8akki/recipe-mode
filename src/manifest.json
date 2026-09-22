@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Recipe Mode",
+  "short_name": "Recipe Mode",
+  "version": "1.0.0",
+  "description": "Cook hands-free on any recipe page: say \"next\", \"how much butter?\" or \"set a timer\".",
+  "homepage_url": "https://github.com/dgr8akki/recipe-mode",
+  "minimum_chrome_version": "116",
+  "permissions": ["sidePanel", "storage", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "side_panel": { "default_path": "panel/panel.html" },
+  "action": {
+    "default_title": "Open Recipe Mode",
+    "default_icon": { "16": "icons/icon-16.png", "32": "icons/icon-32.png", "48": "icons/icon-48.png" }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  }
+}
