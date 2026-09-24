@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Recipe Mode</title>
+    <link rel="stylesheet" href="panel.css" />
+    <script type="module" src="panel.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 id="title" class="title">Recipe Mode</h1>
+      <button
+        id="settings-toggle"
+        class="icon-button"
+        type="button"
+        aria-expanded="false"
+        aria-controls="settings"
+        aria-label="Settings"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />
+          <path
+            d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"
+          />
+        </svg>
+      </button>
+    </header>
+
+    <section id="settings" class="settings" hidden>
+      <form id="key-form" class="key-form">
+        <label for="api-key">AI Gateway API key</label>
+        <div class="row">
+          <input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="vck_…" />
+          <button type="submit">Save</button>
+        </div>
+        <p id="key-status" class="hint" role="status">
+          Stored only in this browser. Sent only to ai-gateway.vercel.sh.
+        </p>
+      </form>
+      <label class="check"><input id="read-aloud" type="checkbox" checked /> Read answers aloud</label>
+    </section>
+
+    <main>
+      <section id="empty" class="empty">
+        <p class="empty-title">Open a recipe to start</p>
+        <p class="hint">Recipe Mode reads the recipe on your current tab. Most recipe sites work.</p>
+      </section>
+
+      <section id="recipe" class="recipe" hidden aria-labelledby="step-count">
+        <ol id="progress" class="progress" aria-hidden="true"></ol>
+        <p id="step-count" class="step-count"></p>
+        <p id="step-text" class="step-text" aria-live="polite"></p>
+        <div class="step-nav">
+          <button id="prev" type="button">Back</button>
+          <button id="next" type="button" class="primary">Next step</button>
+        </div>
+      </section>
+
+      <section class="voice" aria-label="Voice">
+        <button id="mic" type="button" class="mic" aria-pressed="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="9" y="3" width="6" height="11" rx="3" />
+            <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+          </svg>
+          <span id="mic-label">Start listening</span>
+        </button>
+        <p id="heard" class="heard" aria-live="polite"></p>
+        <form id="command-form">
+          <label for="command" class="visually-hidden">Type a command</label>
+          <input
+            id="command"
+            type="text"
+            autocomplete="off"
+            placeholder="Or type: next, how much butter?, set a timer"
+          />
+        </form>
+      </section>
+
+      <section id="timers" class="timers" aria-label="Timers" aria-live="polite"></section>
+
+      <details id="ingredients" class="ingredients" hidden>
+        <summary id="ingredients-summary">Ingredients</summary>
+        <ul id="ingredient-list"></ul>
+      </details>
+
+      <section class="activity" aria-labelledby="activity-heading">
+        <h2 id="activity-heading">Activity</h2>
+        <ol id="activity" class="activity-list" aria-live="polite"></ol>
+      </section>
+    </main>
+  </body>
+</html>
