@@ -5,6 +5,7 @@
 
 import { ingredientsForStep, interpret } from '../lib/assistant.js';
 import { clock, speakDuration } from '../lib/durations.js';
+import { getConnection, mountConnection } from '../lib/connection.js';
 import { JevError, createJevClient } from '../lib/jev.js';
 import { extractRecipe, highlightStep } from '../lib/page.js';
 import { createTranscriptQueue } from '../lib/queue.js';
@@ -19,43 +20,24 @@ const STOP_WORDS = /\b(stop|quiet|shut up|pause)\b/i;
 // ---------------------------------------------------------------------------
 // Settings
 
-let apiKey = '';
-const jev = createJevClient({ getKey: () => apiKey });
+const jev = createJevClient({
+  getKey: async () => (await getConnection()).apiKey,
+  getProvider: async () => (await getConnection()).provider,
+});
 const speaker = createSpeaker({ enabled: () => $('read-aloud').checked });
 
-const settings = await chrome.storage.local.get(['apiKey', 'readAloud']);
-apiKey = settings.apiKey ?? '';
-$('api-key').value = apiKey;
+const settings = await chrome.storage.local.get('readAloud');
 $('read-aloud').checked = settings.readAloud !== false;
-if (!apiKey) toggleSettings(true);
+await mountConnection($('connection'), $('open-settings'), (connected) => {
+  if (!connected) toggleSettings(true);
+});
 
 $('settings-toggle').addEventListener('click', () => toggleSettings());
 $('read-aloud').addEventListener('change', (e) => chrome.storage.local.set({ readAloud: e.target.checked }));
-$('key-form').addEventListener('submit', async (event) => {
-  event.preventDefault();
-  apiKey = $('api-key').value.trim();
-  await chrome.storage.local.set({ apiKey });
-  setKeyStatus('Checking key…');
-  try {
-    await jev.evaluate({
-      state: 'ping',
-      questions: { ok: { type: 'boolean', instructions: 'Is this a test message?' } },
-    });
-    setKeyStatus('Key saved and working.', 'ok');
-  } catch (error) {
-    setKeyStatus(error.message, 'error');
-  }
-});
 
 function toggleSettings(open = $('settings').hidden) {
   $('settings').hidden = !open;
   $('settings-toggle').setAttribute('aria-expanded', String(open));
-}
-
-function setKeyStatus(text, tone) {
-  const status = $('key-status');
-  status.textContent = text;
-  status.className = tone ? `hint status-${tone}` : 'hint';
 }
 
 // ---------------------------------------------------------------------------

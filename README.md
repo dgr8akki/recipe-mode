@@ -52,7 +52,12 @@ Recipe Mode isn't on the Chrome Web Store yet. To install from source:
 3. Click **Load unpacked** and select the unzipped folder (or `src/` in a clone).
 4. Pin **Recipe Mode** from the puzzle-piece menu.
 
-You need an [AI Gateway API key](https://vercel.com/docs/ai-gateway/authentication-and-byok/api-keys) from Vercel. Jev costs $0.042 per million input tokens (about $0.0001 per command). Set a [spend limit](https://vercel.com/docs/ai-gateway/observability-and-spend/budgets) on the key you use.
+You need either a [TypeSafe API key](https://console.typesafe.ai/keys) or a [Vercel AI Gateway API key](https://vercel.com/docs/ai-gateway/authentication-and-byok/api-keys). The settings page opens on install: pick your provider, paste the key and select **Connect**; it's checked before it's saved. Jev costs $0.042 per million input tokens (about $0.0001 per command). With Vercel, set a [spend limit](https://vercel.com/docs/ai-gateway/observability-and-spend/budgets) on the key.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/options-dark.png" />
+  <img src="docs/options-light.png" width="520" alt="The Recipe Mode settings page: a Connect Jev card with a choice between Vercel AI Gateway and TypeSafe, setup steps for the chosen provider, an API key field and a Connect button." />
+</picture>
 
 > [!NOTE]
 > Use Google Chrome. Brave ships no working speech recognition; you can still type commands there.
@@ -60,7 +65,7 @@ You need an [AI Gateway API key](https://vercel.com/docs/ai-gateway/authenticati
 ## Usage
 
 1. Open a recipe, then click the Recipe Mode icon to open the side panel.
-2. Open **Settings**, paste your API key and select **Save**. The panel checks the key.
+2. If you haven't connected a key yet, the panel shows **Connect Jev**; select it to open settings.
 3. Select **Start listening**. The first time, Chrome asks for microphone access in a new tab.
 
 | Say                                                          | What happens                                                   |
@@ -84,7 +89,7 @@ You can type any command in the box under the microphone button.
 | `storage`                 | Keeps your API key and settings in this browser                      |
 | Microphone                | Hears commands; audio is transcribed by the browser and never stored |
 
-Your transcript and the recipe's steps and ingredients are sent to Vercel AI Gateway, which forwards them to TypeSafe to run Jev. Nothing else leaves your browser. See [PRIVACY.md](PRIVACY.md).
+Your transcript and the recipe's steps and ingredients are sent to TypeSafe to run Jev, directly or through Vercel AI Gateway, whichever you picked. Nothing else leaves your browser. See [PRIVACY.md](PRIVACY.md).
 
 ## Development
 
@@ -93,7 +98,7 @@ Requires Node.js 22 or later.
 ```sh
 npm install
 npm run check      # lint + format check + unit tests
-npm run eval       # live evaluation against Jev (needs AI_GATEWAY_API_KEY in .env)
+npm run eval       # live evaluation against Jev (needs TYPESAFE_API_KEY or AI_GATEWAY_API_KEY in .env)
 npm run package    # builds dist/recipe-mode-<version>.zip for the Chrome Web Store
 ```
 
@@ -113,11 +118,13 @@ src/
 ├── manifest.json
 ├── background.js          Opens the side panel; locks the key to extension pages
 ├── panel/                 Side panel UI (HTML, CSS, controller)
+├── options/               Pick a provider; connect, test, replace or remove the key
 ├── permission/            One-time microphone permission page
 └── lib/
     ├── assistant.js       Builds Jev questions and turns answers into intents
     ├── durations.js       Finds cooking times in text ("1 ½ hours", "25-30 mins")
-    ├── jev.js             Jev client: retries, rate-limit pauses, clear errors
+    ├── connection.js      "Connected via …" row; opens settings
+    ├── jev.js             Jev client for TypeSafe or Vercel: retries, rate-limit pauses, clear errors
     ├── page.js            Functions injected into the recipe tab
     ├── queue.js           One request in flight; newest partial wins
     ├── speaker.js         Reads answers aloud; mutes the mic while talking
@@ -134,13 +141,13 @@ evals/                     Live evaluation against Jev
 
 ## Troubleshooting
 
-| Problem                                           | Fix                                                                                                           |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| "Open a recipe to start" on a recipe              | Reload the page. The site may not publish recipe data; the heading fallback covers simple pages only.         |
-| "Speech recognition can't reach Google's servers" | You're in Brave or behind a VPN that blocks Google speech. Use Chrome, or type commands.                      |
-| "Jev is busy. Try again in 30s."                  | TypeSafe is overloaded. Wait, then repeat the command.                                                        |
-| "Your API key was rejected"                       | Check the key in Settings. New Vercel accounts need a card on file before AI Gateway serves requests.         |
-| Nothing happens when you speak                    | Check that your words appear under the button. If not, allow Chrome in macOS Privacy & Security → Microphone. |
+| Problem                                           | Fix                                                                                                                             |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| "Open a recipe to start" on a recipe              | Reload the page. The site may not publish recipe data; the heading fallback covers simple pages only.                           |
+| "Speech recognition can't reach Google's servers" | You're in Brave or behind a VPN that blocks Google speech. Use Chrome, or type commands.                                        |
+| "Jev is busy. Try again in 30s."                  | TypeSafe is overloaded. Wait, then repeat the command.                                                                          |
+| "Your API key was rejected"                       | Select **Change** in Settings and connect a new key. New Vercel accounts need a card on file before AI Gateway serves requests. |
+| Nothing happens when you speak                    | Check that your words appear under the button. If not, allow Chrome in macOS Privacy & Security → Microphone.                   |
 
 ## Limitations
 

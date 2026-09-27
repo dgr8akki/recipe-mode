@@ -82,8 +82,7 @@ button.primary {
   color: var(--accent-ink);
 }
 
-input[type='text'],
-input[type='password'] {
+input[type='text'] {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--line);
@@ -166,32 +165,17 @@ svg {
   background: var(--surface);
 }
 
-.key-form {
+.connection {
   display: grid;
-  gap: 6px;
-}
-
-.key-form label {
-  font-weight: 500;
-}
-
-.row {
-  display: flex;
-  gap: 8px;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
 }
 
 .check {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.status-ok {
-  color: var(--accent);
-}
-
-.status-error {
-  color: var(--danger);
 }
 
 /* Empty state */

@@ -28,16 +28,10 @@
     </header>
 
     <section id="settings" class="settings" hidden>
-      <form id="key-form" class="key-form">
-        <label for="api-key">AI Gateway API key</label>
-        <div class="row">
-          <input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="vck_…" />
-          <button type="submit">Save</button>
-        </div>
-        <p id="key-status" class="hint" role="status">
-          Stored only in this browser. Sent only to ai-gateway.vercel.sh.
-        </p>
-      </form>
+      <div class="connection">
+        <p id="connection" class="hint" role="status"></p>
+        <button id="open-settings" type="button"></button>
+      </div>
       <label class="check"><input id="read-aloud" type="checkbox" checked /> Read answers aloud</label>
     </section>
 
