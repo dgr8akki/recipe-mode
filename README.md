@@ -7,13 +7,13 @@
 **Cook hands-free on any recipe page.** Say "next", "how much butter?" or "set a timer" while your hands are covered in flour.
 
 [![CI](https://github.com/dgr8akki/recipe-mode/actions/workflows/ci.yml/badge.svg)](https://github.com/dgr8akki/recipe-mode/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-4d7c5a.svg)](LICENSE)
-![Manifest V3](https://img.shields.io/badge/manifest-v3-4d7c5a.svg)
-![Chrome 116+](https://img.shields.io/badge/chrome-116%2B-4d7c5a.svg)
+[![License: MIT](https://img.shields.io/badge/license-MIT-ec3013.svg)](LICENSE)
+![Manifest V3](https://img.shields.io/badge/manifest-v3-ec3013.svg)
+![Chrome 116+](https://img.shields.io/badge/chrome-116%2B-ec3013.svg)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png" />
-  <img src="docs/screenshot-light.png" width="360" alt="Recipe Mode side panel showing step 4 of 7 of a banana bread recipe, a running 30 minute timer, and answers to recent voice commands." />
+  <img src="docs/screenshot-light.png" width="360" alt="Recipe Mode side panel on step 6 of 7 of a lemon drizzle cake: a finished 30 minute timer shown as a red Done band, two running timers with countdown bars, the step in large type, and Back, Next step and Start listening controls docked at the bottom." />
 </picture>
 
 </div>
@@ -23,7 +23,8 @@
 - **Works on any recipe site.** Reads the schema.org recipe data most sites publish for search engines, with a fallback for simple pages.
 - **Talk naturally.** "What was that?", "go to the step where I pour it into the tin", "honey, pass the salt" (ignored: that wasn't for you).
 - **Answers out loud** and highlights the current step on the page, so you rarely need to look.
-- **Smart timers.** "Set a timer" uses the time in the current step. When a step mentions two times, it picks the one you meant.
+- **Smart timers.** "Set a timer" uses the time in the current step, or tap **Start the 30 mins timer** under it. When a step mentions two times, it picks the one you meant. A finished timer turns into a red band at the top and chimes every 20 seconds until you dismiss it.
+- **Readable from across the kitchen.** Big type, a ruler-style progress bar, the next step previewed underneath, and big controls docked at the bottom. Light and dark themes.
 - **Fast.** Simple commands like "next" act before you finish the sentence.
 - **Private by default.** On-device speech recognition where Chrome supports it. No accounts, no analytics.
 
@@ -56,7 +57,7 @@ You need either a [TypeSafe API key](https://console.typesafe.ai/keys) or a [Ver
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/options-dark.png" />
-  <img src="docs/options-light.png" width="520" alt="The Recipe Mode settings page: a Connect Jev card with a choice between Vercel AI Gateway and TypeSafe, setup steps for the chosen provider, an API key field and a Connect button." />
+  <img src="docs/options-light.png" width="520" alt="The Recipe Mode settings page: a Connect Jev section with a choice between Vercel AI Gateway and TypeSafe, numbered setup steps for the chosen provider, an API key field and a Connect button." />
 </picture>
 
 > [!NOTE]
@@ -75,8 +76,8 @@ You need either a [TypeSafe API key](https://console.typesafe.ai/keys) or a [Ver
 | "How much butter?"                                           | Reads the ingredient line, for example "140g butter, softened" |
 | "What do I need for this step?", "what are the ingredients?" | Lists the ingredients for this step, or all of them            |
 | "Set a timer", "set a timer for 12 minutes"                  | Starts a timer from the step's own time, or the time you say   |
-| "How long is left?", "cancel the timer"                      | Reads or cancels timers                                        |
-| "Stop"                                                       | Stops reading, even mid-sentence                               |
+| "How long is left?", "cancel the timer"                      | Reads or cancels timers; a ringing timer is cancelled first    |
+| "Stop"                                                       | Stops reading, even mid-sentence, and silences finished timers |
 
 You can type any command in the box under the microphone button.
 
@@ -117,6 +118,8 @@ npm run package    # builds dist/recipe-mode-<version>.zip for the Chrome Web St
 src/
 ├── manifest.json
 ├── background.js          Opens the side panel; locks the key to extension pages
+├── theme.css              Colour, type and button tokens shared by every page
+├── fonts/                 Archivo (SIL OFL 1.1), bundled so nothing loads from the network
 ├── panel/                 Side panel UI (HTML, CSS, controller)
 ├── options/               Pick a provider; connect, test, replace or remove the key
 ├── permission/            One-time microphone permission page
@@ -157,4 +160,4 @@ evals/                     Live evaluation against Jev
 
 ## License
 
-[MIT](LICENSE) © 2026 Aakash Pahuja
+[MIT](LICENSE) © 2026 Aakash Pahuja. The bundled Archivo font is under the [SIL Open Font License](src/fonts/OFL.txt).

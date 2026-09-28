@@ -30,6 +30,7 @@ export async function mountConnection(text, button, onChange = () => {}) {
       : 'Connect a TypeSafe or Vercel AI Gateway key to start.';
     button.textContent = apiKey ? 'Change' : 'Connect Jev';
     button.classList.toggle('primary', !apiKey);
+    button.parentElement?.classList.toggle('connected', Boolean(apiKey));
     onChange(Boolean(apiKey));
     return Boolean(apiKey);
   }

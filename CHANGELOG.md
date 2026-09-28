@@ -2,6 +2,23 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] - 2026-09-28
+
+### Changed
+
+- New look: ink on warm white with one signal red, the Archivo typeface (bundled, no network), square modules and a dark theme for dim kitchens.
+- The step is set in large type (27px, 34px in a wide panel, 22px for long steps). The progress bar reads like a ruler: done, now and upcoming steps differ in shape as well as colour.
+- Timers moved to a rail at the top of the panel, with a countdown bar. A finished timer becomes a pulsing red band with a bell and chimes every 20 seconds until you dismiss it with ✕, "stop" or "cancel the timer".
+- Back, Next, the microphone and the command field are docked at the bottom; only the step, ingredients and activity scroll.
+- Redesigned settings and microphone permission pages, with status messages that use an icon as well as colour.
+- The step highlight on the recipe page is a 4px red outline that stands out on light and dark sites.
+- New icon.
+
+### Added
+
+- A one-tap button under each step that mentions a time, such as **Start the 30 mins timer**.
+- **Up next** shows the following step under the current one.
+
 ## [1.1.0] - 2026-09-27
 
 ### Added
@@ -28,5 +45,6 @@ All notable changes to this project are documented here. The format follows [Kee
 - Current step highlighted and scrolled into view on the recipe page.
 - API key check on save; clear messages for rejected keys, exhausted budgets and rate limits.
 
+[1.2.0]: https://github.com/dgr8akki/recipe-mode/releases/tag/v1.2.0
 [1.1.0]: https://github.com/dgr8akki/recipe-mode/releases/tag/v1.1.0
 [1.0.0]: https://github.com/dgr8akki/recipe-mode/releases/tag/v1.0.0

@@ -4,7 +4,7 @@
  */
 
 import { ingredientsForStep, interpret } from '../lib/assistant.js';
-import { clock, speakDuration } from '../lib/durations.js';
+import { clock, durations, speakDuration } from '../lib/durations.js';
 import { getConnection, mountConnection } from '../lib/connection.js';
 import { JevError, createJevClient } from '../lib/jev.js';
 import { extractRecipe, highlightStep } from '../lib/page.js';
@@ -16,6 +16,7 @@ import { Timers } from '../lib/timers.js';
 const $ = (id) => document.getElementById(id);
 const MAX_ACTIVITY = 30;
 const STOP_WORDS = /\b(stop|quiet|shut up|pause)\b/i;
+const LONG_STEP = 180; // characters; longer steps drop a size so they fit without scrolling
 
 // ---------------------------------------------------------------------------
 // Settings
@@ -80,14 +81,33 @@ function showStep(index, { announce = true } = {}) {
 function render() {
   $('empty').hidden = Boolean(recipe);
   $('recipe').hidden = !recipe;
+  $('dock').hidden = !recipe;
+  $('activity-section').hidden = !recipe;
   $('ingredients').hidden = !recipe?.ingredients.length;
   if (!recipe) return;
 
   $('title').textContent = recipe.title;
   $('step-count').textContent = `Step ${step + 1} of ${recipe.steps.length}`;
   $('step-text').textContent = recipe.steps[step];
+  $('step-text').classList.toggle('long', recipe.steps[step].length > LONG_STEP);
   $('prev').disabled = step === 0;
-  $('next').textContent = step === recipe.steps.length - 1 ? 'Finish' : 'Next step';
+  const last = step === recipe.steps.length - 1;
+  $('next-label').textContent = last ? 'Finish' : 'Next step';
+  $('next').classList.toggle('last', last);
+  // One tap per cooking time in the step: the same timer "set a timer" would start.
+  $('step-timers').replaceChildren(
+    ...durations(recipe.steps[step]).map((time) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.innerHTML = STOPWATCH;
+      button.append(`Start the ${time.label} timer`);
+      button.addEventListener('click', () => startTimer(`Step ${step + 1}: ${time.label}`, time.seconds));
+      return button;
+    }),
+  );
+  $('up-next').hidden = last;
+  $('up-next-label').textContent = `Up next · Step ${step + 2}`;
+  $('up-next-text').textContent = recipe.steps[step + 1] ?? '';
   $('progress').replaceChildren(
     ...recipe.steps.map((_, i) => {
       const li = document.createElement('li');
@@ -100,6 +120,9 @@ function render() {
     ...recipe.ingredients.map((line) => Object.assign(document.createElement('li'), { textContent: line })),
   );
 }
+
+const STOPWATCH =
+  '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2h4M12 14l3-3"/><circle cx="12" cy="14" r="8"/></svg>';
 
 $('prev').addEventListener('click', () => showStep(step - 1));
 $('next').addEventListener('click', () => showStep(step + 1));
@@ -121,41 +144,33 @@ function startTimer(label, seconds) {
 }
 
 function renderTimers() {
+  const finishedFirst = [...timers.list].sort((a, b) => Number(b.finished) - Number(a.finished));
   $('timers').replaceChildren(
-    ...timers.list.map((timer) => {
-      const row = document.createElement('div');
-      row.className = timer.finished ? 'timer finished' : 'timer';
-
-      const label = Object.assign(document.createElement('span'), {
-        className: 'timer-label',
-        textContent: timer.label,
-      });
-      const time = Object.assign(document.createElement('span'), {
-        className: 'timer-time',
-        textContent: timer.finished ? 'Done' : clock(timers.secondsLeft(timer)),
-      });
-      const remove = Object.assign(document.createElement('button'), {
-        type: 'button',
-        className: 'icon-button',
-        textContent: '✕',
-      });
+    ...finishedFirst.map((timer) => {
+      const row = $('timer-template').content.firstElementChild.cloneNode(true);
+      row.classList.toggle('finished', timer.finished);
+      row.querySelector('.timer-label').textContent = timer.label;
+      row.querySelector('.timer-time').textContent = timer.finished ? 'Done' : clock(timers.secondsLeft(timer));
+      row.querySelector('.timer-bar').style.setProperty('--left', timers.fractionLeft(timer));
+      const remove = row.querySelector('.timer-remove');
       remove.setAttribute('aria-label', `Remove ${timer.label} timer`);
       remove.addEventListener('click', () => {
         timers.remove(timer.id);
         renderTimers();
       });
-
-      row.append(label, time, remove);
       return row;
     }),
   );
 }
 
+/** "Stop" or "cancel the timer" silences finished timers. */
+function dismissFinishedTimers() {
+  if (timers.dismissFinished().length) renderTimers();
+}
+
 setInterval(() => {
-  for (const timer of timers.collectFinished()) {
-    chime();
-    answer(`${timer.label} timer is done.`);
-  }
+  for (const timer of timers.collectFinished()) answer(`${timer.label} timer is done.`);
+  if (timers.shouldChime()) chime();
   if (timers.list.length) renderTimers();
 }, 500);
 
@@ -263,9 +278,11 @@ async function perform(intent) {
     case 'timer_cancel': {
       const cancelled = timers.removeLatest();
       renderTimers();
-      return answer(cancelled ? `Cancelled the ${cancelled.label} timer.` : 'No timers to cancel.');
+      if (!cancelled) return answer('No timers to cancel.');
+      return answer(`${cancelled.finished ? 'Stopped' : 'Cancelled'} the ${cancelled.label} timer.`);
     }
     case 'stop_talking':
+      dismissFinishedTimers();
       return speaker.cancel();
     default:
       return undefined; // "none": the cook wasn't talking to us.
@@ -331,16 +348,20 @@ const listener = createListener({
   onTranscript(transcript) {
     // While we talk, the mic mostly hears us: only a local "stop" gets through (no Jev call).
     if (speaker.speaking) {
-      if (STOP_WORDS.test(transcript.text)) speaker.cancel();
+      if (STOP_WORDS.test(transcript.text)) {
+        speaker.cancel();
+        dismissFinishedTimers();
+      }
       return;
     }
-    $('heard').textContent = transcript.text;
+    showHeard(transcript.text, 'live');
     queue.push(transcript);
   },
   onError({ code, message }) {
     if (code === 'not-allowed') {
       chrome.tabs.create({ url: chrome.runtime.getURL('permission/permission.html') });
-      logActivity(null, `${message} Allow it in the tab that just opened, then start listening again.`, true);
+      $('mic').classList.add('blocked');
+      showHeard(`${message} Allow it in the tab that just opened, then start listening again.`, 'error');
       return;
     }
     logActivity(null, message, true);
@@ -348,14 +369,21 @@ const listener = createListener({
   onStatus({ listening, mode }) {
     $('mic').setAttribute('aria-pressed', String(listening));
     $('mic-label').textContent = listening ? 'Listening' : 'Start listening';
-    $('heard').textContent = listening
-      ? `Listening (${mode === 'on-device' ? 'on this device' : 'cloud'} speech recognition)`
-      : '';
+    if (listening) {
+      $('mic').classList.remove('blocked');
+      showHeard(`Listening (${mode === 'on-device' ? 'on this device' : 'cloud'} speech recognition)`);
+    } else if (!$('mic').classList.contains('blocked')) showHeard('');
   },
   onNotice(message) {
-    $('heard').textContent = message;
+    showHeard(message);
   },
 });
+
+/** @param {'live' | 'error'} [tone] live: words heard right now; none: a quiet status line. */
+function showHeard(text, tone) {
+  $('heard').textContent = text;
+  $('heard').className = tone ? `heard ${tone}` : 'heard';
+}
 
 $('mic').addEventListener('click', () => (listener.listening ? listener.stop() : listener.start()));
 

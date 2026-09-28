@@ -86,7 +86,7 @@ describe('highlightStep', () => {
     load(page);
     assert.equal(highlightStep('Cream the butter and sugar until light and fluffy.'), true);
     const two = globalThis.document.getElementById('two');
-    assert.match(two.style.outline, /3px solid/);
+    assert.match(two.style.outline, /4px solid/);
     assert.equal(globalThis.window.lastScrolledTo, two);
   });
 
@@ -95,7 +95,7 @@ describe('highlightStep', () => {
     highlightStep('Cream the butter and sugar until light and fluffy.');
     assert.equal(highlightStep('Heat the oven to 180C.'), true);
     assert.equal(globalThis.document.getElementById('two').style.outline, '');
-    assert.match(globalThis.document.getElementById('one').style.outline, /3px solid/);
+    assert.match(globalThis.document.getElementById('one').style.outline, /4px solid/);
   });
 
   it('reports steps that are not on the page', () => {

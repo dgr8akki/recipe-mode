@@ -4,78 +4,101 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Recipe Mode settings</title>
+    <link rel="stylesheet" href="../theme.css" />
     <link rel="stylesheet" href="options.css" />
     <script type="module" src="options.js"></script>
   </head>
   <body data-next="Open a recipe, then the Recipe Mode side panel.">
-    <main>
-      <header class="brand">
-        <img src="../icons/icon-48.png" width="40" height="40" alt="" />
-        <div>
-          <h1>Recipe Mode</h1>
-          <p class="muted">Hands-free cooking: follow a recipe, set timers and ask questions by voice.</p>
-        </div>
-      </header>
+    <div class="page">
+      <header class="brandbar">Recipe Mode · Settings</header>
 
-      <section class="card" aria-labelledby="connect-title">
-        <h2 id="connect-title">Connect Jev</h2>
-        <p class="muted">
-          Recipe Mode calls Jev with your own API key, so you pay your provider directly. A command costs about $0.0001.
-        </p>
-
-        <div id="connected" class="connected" hidden>
-          <span class="dot" aria-hidden="true"></span>
-          <div class="grow">
-            <p><strong>Connected</strong> via <span id="provider-label"></span> <code id="masked"></code></p>
-            <p id="connected-status" class="muted" role="status"></p>
-          </div>
-          <button id="test" type="button">Test</button>
-          <button id="replace" type="button">Replace</button>
-          <button id="remove" type="button" class="danger">Remove</button>
-        </div>
-
-        <form id="key-form" hidden>
-          <fieldset class="providers">
-            <legend>Where does your key come from?</legend>
-            <label class="option">
-              <input type="radio" name="provider" value="vercel" />
-              <span>
-                <strong>Vercel AI Gateway</strong>
-                <small>Billed to your Vercel account, with spend limits.</small>
-              </span>
-            </label>
-            <label class="option">
-              <input type="radio" name="provider" value="typesafe" />
-              <span>
-                <strong>TypeSafe</strong>
-                <small>Jev direct from its makers, billed by TypeSafe.</small>
-              </span>
-            </label>
-          </fieldset>
-          <ol id="steps" class="steps"></ol>
-          <label for="api-key">API key</label>
-          <div class="row">
-            <input
-              id="api-key"
-              type="password"
-              autocomplete="off"
-              spellcheck="false"
-              aria-describedby="key-status"
-              required
-            />
-            <button type="submit" class="primary">Connect</button>
-            <button id="cancel" type="button" hidden>Cancel</button>
-          </div>
-          <p id="key-status" class="muted" role="status"></p>
-        </form>
+      <section class="hero">
+        <h1>Recipe Mode</h1>
+        <p>Hands-free cooking: follow a recipe, set timers and ask questions by voice.</p>
       </section>
 
-      <p class="muted small">
+      <main class="section" aria-labelledby="connect-title">
+        <div class="section-head">
+          <span class="num" aria-hidden="true">01</span>
+          <h2 id="connect-title">Connect Jev</h2>
+        </div>
+
+        <div class="section-body">
+          <div id="connected" class="connected" hidden>
+            <div class="connected-head">
+              <svg width="28" height="28" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <path d="m8 12 3 3 5-6" />
+              </svg>
+              <p>
+                <strong>Connected via <span id="provider-label"></span></strong>
+                <span id="masked" class="masked"></span>
+              </p>
+            </div>
+            <div class="actions">
+              <button id="test" type="button" class="btn">Test</button>
+              <button id="replace" type="button" class="btn">Replace</button>
+              <button id="remove" type="button" class="btn danger">Remove</button>
+            </div>
+          </div>
+
+          <form id="key-form" hidden>
+            <p class="intro">
+              Recipe Mode calls Jev with your own API key, so you pay your provider directly. A command costs about
+              $0.0001.
+            </p>
+            <fieldset class="providers">
+              <legend class="label">Provider</legend>
+              <label class="option">
+                <input type="radio" name="provider" value="vercel" />
+                <span class="dot" aria-hidden="true"></span>
+                <span>
+                  <strong>Vercel AI Gateway</strong>
+                  <small>Billed to your Vercel account, with spend limits.</small>
+                </span>
+              </label>
+              <label class="option">
+                <input type="radio" name="provider" value="typesafe" />
+                <span class="dot" aria-hidden="true"></span>
+                <span>
+                  <strong>TypeSafe</strong>
+                  <small>Jev direct from its makers, billed by TypeSafe.</small>
+                </span>
+              </label>
+            </fieldset>
+            <ol id="steps" class="steps"></ol>
+            <div class="key">
+              <label for="api-key">API key</label>
+              <div class="row">
+                <input
+                  id="api-key"
+                  type="password"
+                  autocomplete="off"
+                  spellcheck="false"
+                  aria-describedby="status"
+                  required
+                />
+                <button type="submit" class="btn primary">
+                  Connect
+                  <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true">
+                    <path d="M5 12h14M12 5l7 7-7 7" />
+                  </svg>
+                </button>
+                <button id="cancel" type="button" class="btn" hidden>Cancel</button>
+              </div>
+            </div>
+          </form>
+
+          <p id="status" class="status" role="status"></p>
+        </div>
+      </main>
+
+      <footer class="footer">
         Your key is stored only in this browser and sent only to <code id="host"></code>. See the
         <a href="https://github.com/dgr8akki/recipe-mode/blob/main/PRIVACY.md" target="_blank" rel="noreferrer"
           >privacy policy</a
         >.
-      </p>
-    </main>
+      </footer>
+    </div>
   </body>
 </html>

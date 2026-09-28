@@ -36,4 +36,36 @@ describe('Timers', () => {
     assert.equal(timers.list.length, 0);
     assert.equal(timers.removeLatest(), undefined);
   });
+
+  it('dismisses a ringing timer before cancelling a running one', () => {
+    let now = 0;
+    const timers = new Timers({ now: () => now });
+    timers.add('Short', 1);
+    timers.add('Long', 600);
+    now = 1000;
+    timers.collectFinished();
+    assert.equal(timers.removeLatest().label, 'Short');
+    assert.equal(timers.removeLatest().label, 'Long');
+  });
+
+  it('chimes when a timer finishes, then every 20 s until dismissed', () => {
+    let now = 0;
+    const timers = new Timers({ now: () => now });
+    timers.add('Eggs', 60);
+    assert.equal(timers.shouldChime(), false, 'nothing finished');
+    now = 60_000;
+    timers.collectFinished();
+    assert.equal(timers.fractionLeft(timers.list[0]), 0);
+    assert.equal(timers.shouldChime(), true);
+    now = 70_000;
+    assert.equal(timers.shouldChime(), false);
+    now = 80_000;
+    assert.equal(timers.shouldChime(), true);
+    assert.deepEqual(
+      timers.dismissFinished().map((t) => t.label),
+      ['Eggs'],
+    );
+    now = 200_000;
+    assert.equal(timers.shouldChime(), false);
+  });
 });

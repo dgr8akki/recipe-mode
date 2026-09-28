@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Recipe Mode",
   "short_name": "Recipe Mode",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Cook hands-free on any recipe page: say \"next\", \"how much butter?\" or \"set a timer\".",
   "homepage_url": "https://github.com/dgr8akki/recipe-mode",
   "minimum_chrome_version": "116",

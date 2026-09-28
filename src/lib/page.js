@@ -100,8 +100,8 @@ export function highlightStep(stepText) {
   if (!target) return false;
 
   target.setAttribute(ATTR, target.style.outline);
-  target.style.outline = '3px solid #4d7c5a';
-  target.style.outlineOffset = '4px';
+  target.style.outline = '4px solid #ec3013';
+  target.style.outlineOffset = '6px';
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
   target.scrollIntoView({ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
   return true;

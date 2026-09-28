@@ -4,6 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Recipe Mode</title>
+    <link rel="stylesheet" href="../theme.css" />
     <link rel="stylesheet" href="panel.css" />
     <script type="module" src="panel.js"></script>
   </head>
@@ -18,70 +19,128 @@
         aria-controls="settings"
         aria-label="Settings"
       >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" />
-          <path
-            d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"
-          />
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2" aria-hidden="true">
+          <path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4" />
         </svg>
       </button>
     </header>
 
     <section id="settings" class="settings" hidden>
       <div class="connection">
-        <p id="connection" class="hint" role="status"></p>
-        <button id="open-settings" type="button"></button>
+        <p id="connection" role="status"></p>
+        <button id="open-settings" type="button" class="btn"></button>
       </div>
-      <label class="check"><input id="read-aloud" type="checkbox" checked /> Read answers aloud</label>
+      <label class="check">
+        <input id="read-aloud" type="checkbox" checked />
+        <span class="box" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="3"><path d="M20 6 9 17l-5-5" /></svg>
+        </span>
+        Read answers aloud
+      </label>
     </section>
 
-    <main>
+    <ul id="timers" class="timers" aria-label="Timers" aria-live="polite"></ul>
+
+    <main class="scroll">
       <section id="empty" class="empty">
-        <p class="empty-title">Open a recipe to start</p>
-        <p class="hint">Recipe Mode reads the recipe on your current tab. Most recipe sites work.</p>
+        <svg width="44" height="44" viewBox="0 0 24 24" stroke-width="1.75" aria-hidden="true">
+          <path
+            d="M12 7v14M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"
+          />
+        </svg>
+        <h2>Open a recipe to start</h2>
+        <p>Recipe Mode reads the recipe on your current tab. Most recipe sites work.</p>
       </section>
 
       <section id="recipe" class="recipe" hidden aria-labelledby="step-count">
         <ol id="progress" class="progress" aria-hidden="true"></ol>
         <p id="step-count" class="step-count"></p>
         <p id="step-text" class="step-text" aria-live="polite"></p>
-        <div class="step-nav">
-          <button id="prev" type="button">Back</button>
-          <button id="next" type="button" class="primary">Next step</button>
+        <div id="step-timers" class="step-timers"></div>
+        <div id="up-next" class="up-next">
+          <span id="up-next-label" class="label"></span>
+          <span id="up-next-text"></span>
         </div>
       </section>
-
-      <section class="voice" aria-label="Voice">
-        <button id="mic" type="button" class="mic" aria-pressed="false">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="9" y="3" width="6" height="11" rx="3" />
-            <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-          </svg>
-          <span id="mic-label">Start listening</span>
-        </button>
-        <p id="heard" class="heard" aria-live="polite"></p>
-        <form id="command-form">
-          <label for="command" class="visually-hidden">Type a command</label>
-          <input
-            id="command"
-            type="text"
-            autocomplete="off"
-            placeholder="Or type: next, how much butter?, set a timer"
-          />
-        </form>
-      </section>
-
-      <section id="timers" class="timers" aria-label="Timers" aria-live="polite"></section>
 
       <details id="ingredients" class="ingredients" hidden>
         <summary id="ingredients-summary">Ingredients</summary>
         <ul id="ingredient-list"></ul>
       </details>
 
-      <section class="activity" aria-labelledby="activity-heading">
-        <h2 id="activity-heading">Activity</h2>
+      <section id="activity-section" class="activity" aria-labelledby="activity-heading" hidden>
+        <h2 id="activity-heading" class="label">Activity</h2>
         <ol id="activity" class="activity-list" aria-live="polite"></ol>
       </section>
     </main>
+
+    <section id="dock" class="dock" hidden aria-label="Controls">
+      <div class="step-nav">
+        <button id="prev" type="button" class="nav-button">
+          <svg width="24" height="24" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true">
+            <path d="m12 19-7-7 7-7M19 12H5" />
+          </svg>
+          Back
+        </button>
+        <button id="next" type="button" class="nav-button primary">
+          <span id="next-label">Next step</span>
+          <svg class="arrow" width="26" height="26" viewBox="0 0 24 24" stroke-width="2.75" aria-hidden="true">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+          <svg class="check" width="26" height="26" viewBox="0 0 24 24" stroke-width="2.75" aria-hidden="true">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="voice">
+        <button id="mic" type="button" class="mic" aria-pressed="false">
+          <span class="rec" aria-hidden="true"></span>
+          <svg class="mic-on" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3ZM19 10v2a7 7 0 0 1-14 0v-2M12 19v3" />
+          </svg>
+          <svg class="mic-off" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M2 2l20 20M18.89 13.23A7.12 7.12 0 0 0 19 12v-2M5 10v2a7 7 0 0 0 12 5M15 9.34V5a3 3 0 0 0-5.68-1.33M9 9v3a3 3 0 0 0 5.12 2.12M12 19v3"
+            />
+          </svg>
+          <span id="mic-label">Start listening</span>
+          <span class="level" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+        </button>
+        <p id="heard" class="heard" aria-live="polite"></p>
+        <form id="command-form" class="command">
+          <input
+            id="command"
+            type="text"
+            autocomplete="off"
+            aria-label="Type a command"
+            placeholder="Or type: next, how much butter?, set a timer"
+          />
+          <button type="submit" aria-label="Send command">
+            <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 10l-5 5 5 5M20 4v7a4 4 0 0 1-4 4H4" />
+            </svg>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <template id="timer-template">
+      <li class="timer">
+        <svg class="bell" width="30" height="30" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M10.268 21a2 2 0 0 0 3.464 0M22 8c0-2.3-.8-4.3-2-6M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326M4 2C2.8 3.7 2 5.7 2 8"
+          />
+        </svg>
+        <span class="timer-label"></span>
+        <span class="timer-time"></span>
+        <button type="button" class="timer-remove">
+          <svg width="24" height="24" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+        <span class="timer-bar" aria-hidden="true"></span>
+      </li>
+    </template>
   </body>
 </html>

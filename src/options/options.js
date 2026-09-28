@@ -21,8 +21,7 @@ const form = document.getElementById('key-form');
 const input = document.getElementById('api-key');
 const cancel = document.getElementById('cancel');
 const connected = document.getElementById('connected');
-const formStatus = document.getElementById('key-status');
-const connectedStatus = document.getElementById('connected-status');
+const status = document.getElementById('status');
 const radios = [...form.elements.provider];
 
 let { apiKey = '', provider = DEFAULT_PROVIDER } = await chrome.storage.local.get(['apiKey', 'provider']);
@@ -33,7 +32,7 @@ const selected = () => radios.find((radio) => radio.checked)?.value ?? provider;
 
 /** Steps, placeholder and privacy line follow the provider being shown. */
 function showProvider(id) {
-  document.getElementById('steps').innerHTML = STEPS[id].map((step) => `<li>${step}</li>`).join('');
+  document.getElementById('steps').innerHTML = STEPS[id].map((step) => `<li><span>${step}</span></li>`).join('');
   input.placeholder = PROVIDERS[id].placeholder;
   document.getElementById('host').textContent = PROVIDERS[id].host;
 }
@@ -41,20 +40,20 @@ function showProvider(id) {
 function render(editing = false) {
   const showForm = editing || !apiKey;
   form.hidden = !showForm;
-  connected.hidden = showForm;
+  connected.hidden = !apiKey; // stays visible while replacing, so Cancel has context
   cancel.hidden = !apiKey;
   input.value = '';
   radios.forEach((radio) => (radio.checked = radio.value === provider));
   showProvider(provider);
   document.getElementById('provider-label').textContent = PROVIDERS[provider].label;
   document.getElementById('masked').textContent = maskKey(apiKey);
-  if (showForm) input.focus();
+  if (showForm) input.focus({ preventScroll: true });
 }
 
 radios.forEach((radio) =>
   radio.addEventListener('change', () => {
     showProvider(selected());
-    setStatus(formStatus, '');
+    setStatus('');
     input.focus();
   }),
 );
@@ -75,9 +74,11 @@ async function test(id, key) {
   }
 }
 
-function setStatus(el, text, tone) {
-  el.textContent = text;
-  el.className = tone ? `status-${tone}` : 'muted';
+/** @param {'info' | 'ok' | 'error' | 'neutral'} [tone] */
+function setStatus(text, tone = 'info') {
+  status.textContent = text;
+  status.className = `status ${tone}`;
+  input.setAttribute('aria-invalid', String(tone === 'error'));
 }
 
 form.addEventListener('submit', async (event) => {
@@ -86,30 +87,35 @@ form.addEventListener('submit', async (event) => {
   const key = input.value.trim();
   const button = form.querySelector('button[type="submit"]');
   button.disabled = true;
-  setStatus(formStatus, `Checking key with ${PROVIDERS[id].label}…`);
+  setStatus(`Checking key with ${PROVIDERS[id].label}…`);
   const error = await test(id, key);
   button.disabled = false;
-  if (error) return setStatus(formStatus, error, 'error');
+  if (error) return setStatus(error, 'error');
   apiKey = key;
   provider = id;
   await chrome.storage.local.set({ apiKey, provider });
-  setStatus(formStatus, '');
   render();
-  setStatus(connectedStatus, `Key works. ${document.body.dataset.next}`, 'ok');
+  setStatus(`Key works. ${document.body.dataset.next}`, 'ok');
 });
 
 document.getElementById('test').addEventListener('click', async () => {
-  setStatus(connectedStatus, 'Checking key…');
+  setStatus(`Checking key with ${PROVIDERS[provider].label}…`);
   const error = await test(provider, apiKey);
-  setStatus(connectedStatus, error || 'Key works.', error ? 'error' : 'ok');
+  setStatus(error || 'Key works.', error ? 'error' : 'ok');
 });
 
-document.getElementById('replace').addEventListener('click', () => render(true));
-cancel.addEventListener('click', () => render());
+document.getElementById('replace').addEventListener('click', () => {
+  setStatus('');
+  render(true);
+});
+cancel.addEventListener('click', () => {
+  setStatus('');
+  render();
+});
 
 document.getElementById('remove').addEventListener('click', async () => {
   await chrome.storage.local.remove('apiKey');
   apiKey = '';
-  setStatus(formStatus, 'Key removed from this browser.');
   render();
+  setStatus('Key removed from this browser.', 'neutral');
 });

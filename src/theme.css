@@ -1,0 +1,254 @@
+/* Recipe Mode tokens, shared by the side panel, settings and permission pages.
+   Ink on warm white, square modules split by 2px rules, one signal red for "now" and "go". */
+
+@font-face {
+  font-family: 'Archivo';
+  src: url('fonts/archivo-latin.woff2') format('woff2');
+  font-weight: 400 800;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light dark;
+
+  --bg: #f3f2f2;
+  --surface: #eae9e9;
+  --ink: #201e1d;
+  --muted: #605d5d;
+  --rule: rgb(32 30 29 / 0.4);
+  --line: #7d7979;
+  --accent: #ec3013;
+  --accent-hover: #dd2b0f;
+  --accent-press: #ae1800;
+  --accent-ink: #ae1800;
+  --accent-tint: #ffe0d9;
+  --on-accent: #ffffff;
+  --done-a: #ae1800;
+  --done-b: #dd2b0f;
+  --on-done: #ffffff;
+  --focus: #ec3013;
+
+  --font: 'Archivo', system-ui, sans-serif;
+  --focus-ring: 3px solid var(--focus);
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 120ms;
+  --pulse: 1200ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141312;
+    --surface: #211f1e;
+    --ink: #f3f2f2;
+    --muted: #bab6b6;
+    --rule: rgb(243 242 242 / 0.38);
+    --line: #9b9797;
+    --accent: #ff563c;
+    --accent-hover: #ff7a63;
+    --accent-press: #ff9783;
+    --accent-ink: #ff9783;
+    --accent-tint: #3a140d;
+    --on-accent: #141312;
+    --done-a: #ff563c;
+    --done-b: #ff9783;
+    --on-done: #141312;
+    --focus: #ff563c;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* `hidden` must win over the display values set on components. */
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.45 var(--font);
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+button,
+input {
+  font: inherit;
+  color: inherit;
+  border-radius: 0;
+}
+
+button {
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease);
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+svg {
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: square;
+}
+
+a {
+  color: var(--accent-ink);
+  font-weight: 600;
+  text-underline-offset: 3px;
+}
+
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 3px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Buttons: solid red means "go", outlined ink is everything else. */
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 48px;
+  padding: 0 20px;
+  font-weight: 800;
+  text-align: left;
+  background: transparent;
+  border: 2px solid var(--ink);
+}
+
+.btn:not(:disabled):hover {
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+}
+
+.btn.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: var(--accent);
+}
+
+.btn.primary:not(:disabled):hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn.primary:not(:disabled):active {
+  background: var(--accent-press);
+  border-color: var(--accent-press);
+}
+
+/* Red on red would vanish. */
+.btn.primary:focus-visible {
+  outline-color: var(--ink);
+}
+
+.btn.danger {
+  color: var(--accent-ink);
+  border-color: var(--accent-ink);
+}
+
+/* Brand strip at the top of full pages. */
+
+.brandbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 var(--pad);
+  border-bottom: 2px solid var(--rule);
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.brandbar::before {
+  content: '';
+  width: 14px;
+  height: 14px;
+  background: var(--accent);
+}
+
+/* Status messages: icon plus text, never colour alone. */
+
+.status {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  border: 2px solid var(--rule);
+}
+
+.status:empty {
+  display: none;
+}
+
+.status::before {
+  content: '';
+  flex: none;
+  width: 22px;
+  height: 22px;
+  background: currentColor;
+  mask: var(--icon) center / contain no-repeat;
+}
+
+.status.info {
+  --icon: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="square"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>');
+}
+
+.status.ok {
+  --icon: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="square"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-6"/></svg>');
+  background: var(--surface);
+  border-color: var(--ink);
+}
+
+.status.error {
+  --icon: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="square"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>');
+  background: var(--accent-tint);
+  color: var(--accent-ink);
+  border-color: var(--accent-ink);
+}
+
+.status.neutral {
+  --icon: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="square"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>');
+  background: var(--surface);
+}
