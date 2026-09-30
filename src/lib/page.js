@@ -130,7 +130,10 @@ export function highlightStep(stepText) {
   // The smallest element containing the step's opening words is the step itself. textContent, read
   // once per element: innerText forces layout, and recipe pages carry hundreds of comment paragraphs.
   const target = [...document.querySelectorAll('li, p')]
-    .map((el) => ({ el, length: normalize(el.textContent).length, hit: normalize(el.textContent).includes(needle) }))
+    .map((el) => {
+      const text = normalize(el.textContent);
+      return { el, length: text.length, hit: text.includes(needle) };
+    })
     .filter((c) => c.hit)
     .sort((a, b) => a.length - b.length)[0]?.el;
   if (!target) return false;

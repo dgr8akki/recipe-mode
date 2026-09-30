@@ -159,7 +159,7 @@ evals/                     Live evaluation against Jev
 ## Limitations
 
 - Timers keep running with the side panel closed and Chrome shows a notification when one ends, but they don't survive closing the browser. With the panel closed, a timer under 30 seconds can ring late.
-- While Recipe Mode is talking, only "stop" is heard, so it doesn't react to its own voice.
+- While Recipe Mode is talking, a command you say is held until it finishes; only "stop" acts at once. That is how it avoids reacting to its own voice.
 - Reads the recipe from the page you open. It can't follow a recipe inside an embedded video.
 
 ## License

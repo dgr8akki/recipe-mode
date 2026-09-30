@@ -7,7 +7,7 @@ import { ingredientsForStep, interpret } from '../lib/assistant.js';
 import { createChime } from '../lib/chime.js';
 import { clock, durations, speakDuration } from '../lib/durations.js';
 import { getConnection, mountConnection } from '../lib/connection.js';
-import { JevError, createJevClient } from '../lib/jev.js';
+import { JevError, createJevClient, sessionPauseStore } from '../lib/jev.js';
 import { canScan, clearHighlight, extractRecipe, highlightStep } from '../lib/page.js';
 import { createTranscriptQueue } from '../lib/queue.js';
 import { createRecentSet } from '../lib/recent.js';
@@ -28,6 +28,7 @@ const PARTIAL_DEBOUNCE_MS = 150; // recognition emits a partial per word; wait f
 const jev = createJevClient({
   getKey: async () => (await getConnection()).apiKey,
   getProvider: async () => (await getConnection()).provider,
+  pauseStore: sessionPauseStore(chrome.storage.session), // a 429 backoff outlives this panel
 });
 /** A final transcript heard while Recipe Mode was talking; runs once it has finished (see onIdle). */
 let heldTranscript = null;
@@ -38,12 +39,21 @@ const speaker = createSpeaker({
     if (!available) readAloudUnavailable();
   },
   onIdle() {
+    clearHoldNotice();
     if (!heldTranscript) return;
     const transcript = heldTranscript;
     heldTranscript = null;
     queue.push(transcript);
   },
 });
+
+/** The "wait for me" line stays only while there is something to wait for. */
+let holdNoticeShown = false;
+function clearHoldNotice() {
+  if (!holdNoticeShown) return;
+  holdNoticeShown = false;
+  showHeard('');
+}
 
 function readAloudUnavailable() {
   if (!$('read-aloud').checked) return;
@@ -129,7 +139,7 @@ function render() {
   $('empty').hidden = Boolean(recipe);
   $('recipe').hidden = !recipe;
   $('dock').hidden = !recipe;
-  $('activity-section').hidden = !recipe;
+  $('activity-section').hidden = !recipe && !$('activity').children.length; // replies after the tab closed still show
   $('ingredients').hidden = !recipe?.ingredients.length;
   if (!recipe) return;
 
@@ -418,6 +428,7 @@ function logActivity(said, result, isError = false) {
     Object.assign(document.createElement('span'), { className: isError ? 'error' : 'result', textContent: result }),
   );
   $('activity').prepend(item);
+  $('activity-section').hidden = false;
   while ($('activity').children.length > MAX_ACTIVITY) $('activity').lastChild.remove();
   return item;
 }
@@ -453,8 +464,10 @@ const listener = createListener({
       if (STOP_WORDS.test(transcript.text)) {
         speaker.cancel();
         dismissFinishedTimers();
+        clearHoldNotice();
       } else if (transcript.final) {
         heldTranscript = transcript;
+        holdNoticeShown = true;
         showHeard('Wait for me to finish, or say "stop".');
       }
       return;

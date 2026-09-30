@@ -63,11 +63,14 @@ export function createSpeaker({
         .trim()
         .split(/(?<=[.!?])\s+/)
         .filter(Boolean);
+      let reported = false; // one failure line per readout, however many sentences it had
       sentences.forEach((sentence, i) => {
         const utterance = new SpeechSynthesisUtterance(sentence);
         if (i === sentences.length - 1) utterance.onend = () => finish(ECHO_MS);
         utterance.onerror = (event) => {
-          if (NOT_FAILURES.has(event?.error)) return;
+          if (reported || NOT_FAILURES.has(event?.error)) return;
+          reported = true;
+          speechSynthesis.cancel(); // the rest would fail the same way
           // Without this the length-based estimate keeps the mic muted for a readout nobody heard.
           finish(0);
           onError(`Couldn't read that aloud (${event?.error ?? 'unknown error'}).`);

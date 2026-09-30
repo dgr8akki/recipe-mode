@@ -117,6 +117,21 @@ describe('options page', () => {
     assert.equal(errors.mock.callCount(), 0, 'a provider verdict is not logged as an error');
   });
 
+  it('returns focus to the key field after a failed check', async () => {
+    const page = await load({ reply: new TypeError('Failed to fetch') });
+    await connect(page);
+    assert.equal(page.document.activeElement, page.$('api-key'));
+  });
+
+  it('treats an aborted request like an unreachable host', async () => {
+    const page = await load({ reply: new DOMException('The operation was aborted.', 'AbortError') });
+    await connect(page);
+    assert.equal(page.chrome.storage.local.store.apiKey, undefined);
+    assert.match(page.$('key-status').textContent, /^Can't reach ai-gateway\.vercel\.sh\./);
+    assert.equal(page.$('api-key').getAttribute('aria-invalid'), 'false');
+    assert.equal(page.document.activeElement, page.$('api-key'));
+  });
+
   it('marks the key invalid when the provider rejects it, and clears that on typing', async () => {
     const page = await load({ reply: Response.json({ error: { message: 'nope' } }, { status: 401 }) });
     await connect(page);

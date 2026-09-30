@@ -28,11 +28,25 @@ describe('panel markup', () => {
     assert.match($('empty').textContent, /each page you view/i);
   });
 
-  it('shows a request in flight, without motion for those who asked for none', () => {
-    assert.match(css, /\.thinking \.mic\[aria-pressed='true'\] \.rec \{\s*animation:/);
+  it('shows a request in flight, and the reduced-motion override can actually win', () => {
     assert.match(css, /\.thinking \.heard\.live::after \{\s*content: ' …';/);
-    const reduced = css.slice(css.indexOf('prefers-reduced-motion: reduce'));
-    assert.match(reduced, /\.thinking \.mic \.rec \{\s*animation: none/);
+    // jsdom cannot compute the cascade, so compare what decides it: specificity, then order.
+    const specificity = (selector) => [
+      (selector.match(/#[\w-]+/g) ?? []).length,
+      (selector.match(/\.[\w-]+|\[[^\]]+\]/g) ?? []).length,
+      (selector.match(/(^|[\s>+~])[a-z][\w-]*/g) ?? []).length,
+    ];
+    const higherOrEqual = (a, b) => a.every((n, i) => n >= b[i]);
+    const pulse = css.match(/^([^{@\n][^{]*\.rec)\s*\{\s*animation: rec-pulse/m);
+    assert.ok(pulse, 'the pulse rule exists');
+    const reducedBlock = css.slice(css.indexOf('prefers-reduced-motion: reduce'));
+    const override = reducedBlock.match(/^\s*([^{@\n][^{]*\.rec)\s*\{\s*animation: none/m);
+    assert.ok(override, 'the reduced-motion block resets the pulse');
+    assert.ok(
+      higherOrEqual(specificity(override[1].trim()), specificity(pulse[1].trim())),
+      `override "${override[1].trim()}" is weaker than "${pulse[1].trim()}"`,
+    );
+    assert.ok(css.indexOf(override[0]) > css.indexOf(pulse[0]), 'the override comes later in the sheet');
   });
 
   it('names the settings section as a landmark', () => {
@@ -54,12 +68,25 @@ describe('panel markup', () => {
     assert.match(rule(css, '.timers'), /max-height: 30vh;\s*overflow-y: auto/);
     assert.match(rule(css, '.scroll'), /min-height: 120px/);
     assert.match(rule(css, '.timer'), /grid-template-columns: minmax\(0, 1fr\)/);
-    assert.match(rule(css, '.step-nav'), /minmax\(0, 1fr\) minmax\(0, 2fr\)/);
     assert.match(
       rule(css, '.voice'),
       /grid-template-columns: minmax\(0, 1fr\)/,
       'the mic label must wrap, not widen the dock',
     );
+    assert.match(rule(css, '.timer-label'), /overflow-wrap: break-word/, 'labels wrap between words, not inside them');
+    assert.doesNotMatch(css, /overflow-wrap: anywhere/);
+    assert.match(rule(css, '.step-nav'), /grid-template-columns: auto minmax\(0, 1fr\)/, 'Back is sized to its label');
+    // Container queries key off the rail's and dock's own width, so they also fire under CSS zoom.
+    for (const sel of ['.timers', '.dock']) assert.match(rule(css, sel), /container-type: inline-size/);
+    const narrow = css.slice(css.indexOf('@container (max-width: 300px)'));
+    assert.match(narrow, /grid-template-areas:\s*'time remove'\s*'label remove'/, 'the label gets its own row');
+    assert.match(narrow, /#prev \.nav-label \{\s*display: none/);
+    assert.equal($('prev').getAttribute('aria-label'), 'Back', 'the name survives hiding the text');
+  });
+
+  it('puts the timer rail inside a named landmark', () => {
+    const region = $('timers').closest('section[aria-label]');
+    assert.equal(region?.getAttribute('aria-label'), 'Timers');
   });
 
   it('keeps the activity log as the one place timer starts and finishes are announced', () => {

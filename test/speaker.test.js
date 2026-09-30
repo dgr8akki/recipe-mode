@@ -74,6 +74,17 @@ describe('speaker', () => {
     assert.deepEqual(errors, ["Couldn't read that aloud (synthesis-failed)."]);
   });
 
+  it('reports a failure once per say() and stops the rest of the sentences', () => {
+    const synth = fakeSynthesis();
+    const errors = [];
+    const speaker = createSpeaker({ enabled: () => true, now: clock, onError: (m) => errors.push(m) });
+    speaker.say('One. Two. Three.');
+    assert.equal(synth.spoken.length, 3);
+    for (const utterance of synth.spoken) utterance.onerror({ error: 'synthesis-failed' });
+    assert.deepEqual(errors, ["Couldn't read that aloud (synthesis-failed)."]);
+    assert.equal(synth.cancels, 2, 'the remaining sentences were cancelled after the first failure');
+  });
+
   it('cancel stops speech and leaves only the echo grace', () => {
     const synth = fakeSynthesis();
     const speaker = createSpeaker({ enabled: () => true, now: clock });

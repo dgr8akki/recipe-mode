@@ -37,6 +37,21 @@ function answersFor({ state, questions }) {
   );
 }
 
+/** webkitSpeechRecognition stand-in the panel's listener can drive; tests fire its onresult. */
+class FakeRecognition {
+  static last = null;
+  constructor() {
+    FakeRecognition.last = this;
+  }
+  start() {
+    this.onstart?.();
+  }
+  stop() {}
+  result(text, isFinal) {
+    this.onresult({ results: [Object.assign([{ transcript: text }], { isFinal })] });
+  }
+}
+
 let restore = () => {};
 let seq = 0;
 afterEach(() => {
@@ -44,18 +59,28 @@ afterEach(() => {
   delete globalThis.fetch;
   delete globalThis.speechSynthesis;
   delete globalThis.SpeechSynthesisUtterance;
+  delete globalThis.webkitSpeechRecognition;
 });
 
 /** Loads panel.js against the real panel.html, a recipe tab and a chrome double. */
-async function load({ key = 'vck_0123456789abcdef', fetchReply } = {}) {
+async function load({ key = 'vck_0123456789abcdef', fetchReply, readAloud = true } = {}) {
+  globalThis.webkitSpeechRecognition = FakeRecognition;
   const chrome = fakeChrome({
-    local: key ? { apiKey: key, provider: 'vercel', readAloud: true } : {},
+    local: key ? { apiKey: key, provider: 'vercel', readAloud } : {},
     tabs: [{ id: 7, url: 'https://recipes.example/banana-bread', active: true }],
     pageResults: { extractRecipe: recipe, highlightStep: true, clearHighlight: 0 },
   });
   restore = installPage(html, chrome);
   const spoken = [];
-  globalThis.speechSynthesis = { speak: (u) => spoken.push(u.text), cancel() {}, getVoices: () => [{ lang: 'en-US' }] };
+  const utterances = [];
+  globalThis.speechSynthesis = {
+    speak: (u) => {
+      spoken.push(u.text);
+      utterances.push(u);
+    },
+    cancel() {},
+    getVoices: () => [{ lang: 'en-US' }],
+  };
   globalThis.SpeechSynthesisUtterance = class {
     constructor(text) {
       this.text = text;
@@ -68,7 +93,14 @@ async function load({ key = 'vck_0123456789abcdef', fetchReply } = {}) {
   await import(`../src/panel/panel.js?case=${seq++}`);
   for (let i = 0; i < 6; i++) await settle(); // storage, connection, timers, recipe tab
   const $ = (id) => globalThis.document.getElementById(id);
-  return { chrome, spoken, $, document: globalThis.document, window: globalThis.window };
+  return {
+    chrome,
+    spoken,
+    speaker: { spoken: utterances },
+    $,
+    document: globalThis.document,
+    window: globalThis.window,
+  };
 }
 
 async function type(ctx, text) {
@@ -181,14 +213,51 @@ describe('panel', () => {
     assert.equal(ctx.$('step-count').textContent, 'Step 1 of 3');
   });
 
-  it('goes back to the empty state when the recipe tab closes', async () => {
-    const { $, chrome } = await load();
+  it('goes back to the empty state when the recipe tab closes, keeping the activity log in view', async () => {
+    const ctx = await load();
+    const { $, chrome } = ctx;
+    await type(ctx, 'next');
     chrome.tabs.onRemoved.fire(99);
     assert.equal($('recipe').hidden, false, 'another tab closing changes nothing');
     chrome.tabs.onRemoved.fire(7);
     assert.equal($('recipe').hidden, true);
     assert.equal($('empty').hidden, false);
     assert.equal($('dock').hidden, true);
+    assert.equal($('activity-section').hidden, false, 'there are entries, so replies have somewhere visible to go');
+    await type(ctx, 'next');
+    assert.match(activity($)[0], /recipe/);
+  });
+
+  it('acts on a confident partial once and ignores the final of the same phrase', async () => {
+    const ctx = await load({ readAloud: false }); // silent, so the final is not held for the speaker
+    ctx.$('mic').click();
+    await settle();
+    const recognition = FakeRecognition.last;
+    assert.ok(recognition, 'listening started');
+    recognition.result('next', false);
+    await new Promise((resolve) => setTimeout(resolve, 200)); // partial debounce
+    for (let i = 0; i < 6; i++) await settle();
+    assert.equal(ctx.$('step-count').textContent, 'Step 2 of 3');
+    recognition.result('next', true);
+    for (let i = 0; i < 8; i++) await settle();
+    assert.equal(ctx.$('step-count').textContent, 'Step 2 of 3', 'the final did not move again');
+    assert.equal(activity(ctx.$).length, 1, 'one entry for the phrase, no Thinking line for its final');
+    assert.match(activity(ctx.$)[0], /^["“]next["”] Next step in \d+ ms, before you finished$/);
+  });
+
+  it('clears the "wait for me" notice once the held command has run', async () => {
+    const ctx = await load();
+    ctx.$('mic').click();
+    await settle();
+    const recognition = FakeRecognition.last;
+    ctx.$('next').click(); // read aloud: the speaker is now busy
+    recognition.result('next', true);
+    assert.match(ctx.$('heard').textContent, /Wait for me to finish/);
+    ctx.speaker.spoken.at(-1).onend(); // the readout ends
+    await new Promise((resolve) => setTimeout(resolve, 520)); // echo grace
+    for (let i = 0; i < 8; i++) await settle();
+    assert.equal(ctx.$('heard').textContent, '');
+    assert.equal(ctx.$('step-count').textContent, 'Step 3 of 3', 'the held command ran');
   });
 
   it('without a key, sends the cook to settings instead of Jev', async () => {
