@@ -94,7 +94,7 @@ Your transcript and the recipe's steps and ingredients are sent to TypeSafe to r
 
 ## Development
 
-Requires Node.js 22 or later.
+Requires Node.js 22 or later. [CONTRIBUTING.md](CONTRIBUTING.md) covers what to check before a pull request and how a release is cut.
 
 ```sh
 npm install
@@ -117,7 +117,7 @@ npm run package    # builds dist/recipe-mode-<version>.zip for the Chrome Web St
 ```
 src/
 ├── manifest.json
-├── background.js          Opens the side panel; locks the key to extension pages
+├── background.js          Opens the side panel; locks the key to extension pages on Chrome 140+
 ├── theme.css              Colour, type and button tokens shared by every page
 ├── fonts/                 Archivo (SIL OFL 1.1), bundled so nothing loads from the network
 ├── panel/                 Side panel UI (HTML, CSS, controller)

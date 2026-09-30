@@ -2,6 +2,12 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+
+- The background worker no longer crashes on Chrome 116–139, where `storage.local` refuses `setAccessLevel`. On those versions the settings page did not open after install and the extension showed an error in `chrome://extensions`.
+
 ## [1.2.0] - 2026-09-28
 
 ### Changed
