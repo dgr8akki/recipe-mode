@@ -8,6 +8,20 @@
  */
 
 /**
+ * Whether the panel should look for a recipe on a tab at all. Not injected:
+ * the panel calls this before `executeScript`, so chrome://, file:// and
+ * other extensions' pages are skipped up front rather than by catching the
+ * rejection. The extension's own sample recipe is the one non-web page allowed.
+ *
+ * @param {string | undefined} url The tab's URL.
+ * @param {string} ownOrigin `chrome.runtime.getURL('')`.
+ */
+export function canScan(url, ownOrigin) {
+  if (!url) return false;
+  return /^https?:\/\//.test(url) || url.startsWith(ownOrigin);
+}
+
+/**
  * Reads the recipe on the current page.
  *
  * Uses schema.org `Recipe` JSON-LD first (most recipe sites publish it for
@@ -74,6 +88,25 @@ export function extractRecipe() {
   const steps = listAfterHeading(/method|instructions|directions|steps/i);
   if (!steps.length) return null;
   return { title: document.title, ingredients: listAfterHeading(/ingredients/i), steps };
+}
+
+/**
+ * Removes the step outline, restoring whatever inline outline the page had.
+ * The panel runs this when it closes or moves to another recipe tab, so a
+ * page is not left with a red box on it. Same loop as in `highlightStep`;
+ * injected functions cannot share code.
+ *
+ * @returns {number} How many elements were cleared.
+ */
+export function clearHighlight() {
+  const ATTR = 'data-recipe-mode-outline';
+  const marked = document.querySelectorAll(`[${ATTR}]`);
+  for (const el of marked) {
+    el.style.outline = el.getAttribute(ATTR);
+    el.style.outlineOffset = '';
+    el.removeAttribute(ATTR);
+  }
+  return marked.length;
 }
 
 /**

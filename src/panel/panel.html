@@ -39,7 +39,7 @@
       </label>
     </section>
 
-    <ul id="timers" class="timers" aria-label="Timers" aria-live="polite"></ul>
+    <ul id="timers" class="timers" aria-label="Timers"></ul>
 
     <main class="scroll">
       <section id="empty" class="empty">
@@ -49,7 +49,7 @@
           />
         </svg>
         <h2>Open a recipe to start</h2>
-        <p>Recipe Mode reads the recipe on your current tab. Most recipe sites work.</p>
+        <p>While this panel is open, Recipe Mode checks each page you view for a recipe. Most recipe sites work.</p>
       </section>
 
       <section id="recipe" class="recipe" hidden aria-labelledby="step-count">
@@ -107,7 +107,7 @@
           <span id="mic-label">Start listening</span>
           <span class="level" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
         </button>
-        <p id="heard" class="heard" aria-live="polite"></p>
+        <p id="heard" class="heard"></p>
         <form id="command-form" class="command">
           <input
             id="command"
@@ -133,7 +133,7 @@
           />
         </svg>
         <span class="timer-label"></span>
-        <span class="timer-time"></span>
+        <span class="timer-time" role="timer"></span>
         <button type="button" class="timer-remove">
           <svg width="24" height="24" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true">
             <path d="M18 6 6 18M6 6l12 12" />

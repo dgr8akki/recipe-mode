@@ -18,6 +18,7 @@
   --rule: rgb(32 30 29 / 0.4);
   --line: #7d7979;
   --accent: #ec3013;
+  --accent-fill: #dd2b0f; /* button fills: 4.74:1 with white, where --accent only manages 4.20:1 */
   --accent-hover: #dd2b0f;
   --accent-press: #ae1800;
   --accent-ink: #ae1800;
@@ -44,6 +45,7 @@
     --rule: rgb(243 242 242 / 0.38);
     --line: #9b9797;
     --accent: #ff563c;
+    --accent-fill: #ff563c;
     --accent-hover: #ff7a63;
     --accent-press: #ff9783;
     --accent-ink: #ff9783;
@@ -159,9 +161,9 @@ a {
 }
 
 .btn.primary {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
-  border-color: var(--accent);
+  border-color: var(--accent-fill);
 }
 
 .btn.primary:not(:disabled):hover {

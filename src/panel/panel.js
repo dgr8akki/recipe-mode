@@ -4,13 +4,15 @@
  */
 
 import { ingredientsForStep, interpret } from '../lib/assistant.js';
+import { createChime } from '../lib/chime.js';
 import { clock, durations, speakDuration } from '../lib/durations.js';
 import { getConnection, mountConnection } from '../lib/connection.js';
 import { JevError, createJevClient } from '../lib/jev.js';
-import { extractRecipe, highlightStep } from '../lib/page.js';
+import { canScan, clearHighlight, extractRecipe, highlightStep } from '../lib/page.js';
 import { createTranscriptQueue } from '../lib/queue.js';
 import { createSpeaker } from '../lib/speaker.js';
 import { createListener } from '../lib/speech.js';
+import { createTimerStore } from '../lib/timer-store.js';
 import { Timers } from '../lib/timers.js';
 
 const $ = (id) => document.getElementById(id);
@@ -29,9 +31,9 @@ const speaker = createSpeaker({ enabled: () => $('read-aloud').checked });
 
 const settings = await chrome.storage.local.get('readAloud');
 $('read-aloud').checked = settings.readAloud !== false;
-await mountConnection($('connection'), $('open-settings'), (connected) => {
-  if (!connected) toggleSettings(true);
-});
+
+/** Whether a Jev key is saved. Only voice and typed commands need one; the rest of the panel works without. */
+let connected = false;
 
 $('settings-toggle').addEventListener('click', () => toggleSettings());
 $('read-aloud').addEventListener('change', (e) => chrome.storage.local.set({ readAloud: e.target.checked }));
@@ -53,14 +55,26 @@ let recipeUrl = null;
 async function loadRecipeFromActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
   if (!tab?.id || (tab.id === recipeTabId && tab.url === recipeUrl)) return;
-  const found = await runInTab(tab.id, extractRecipe).catch(() => null); // chrome:// pages can't be scripted
+  if (!canScan(tab.url, chrome.runtime.getURL(''))) return;
+  const found = await runInTab(tab.id, extractRecipe).catch(() => null); // the tab may have navigated away
   // Keep the current recipe while the cook glances at another tab.
   if (!found) return;
+  if (recipeTabId !== null && recipeTabId !== tab.id) clearHighlightIn(recipeTabId);
   recipe = found;
   recipeTabId = tab.id;
   recipeUrl = tab.url;
   showStep(0, { announce: false });
 }
+
+/** Best effort: the tab may be gone. */
+function clearHighlightIn(tabId) {
+  runInTab(tabId, clearHighlight).catch(() => {});
+}
+
+// Closing the panel must not leave a red box on the recipe. pagehide is the last chance to ask the tab.
+window.addEventListener('pagehide', () => {
+  if (recipeTabId !== null) clearHighlightIn(recipeTabId);
+});
 
 chrome.tabs.onActivated.addListener(loadRecipeFromActiveTab);
 chrome.tabs.onUpdated.addListener((_id, info, tab) => {
@@ -136,9 +150,22 @@ async function runInTab(tabId, func, args = []) {
 // Timers
 
 const timers = new Timers();
+// Timers live in session storage with an alarm each, so they keep going when this panel closes;
+// the service worker rings them then. Every change here is saved, and changes elsewhere show up.
+const timerStore = createTimerStore({ storage: chrome.storage.session, alarms: chrome.alarms });
+await timerStore.load(timers);
+timerStore.onChange((snapshot) => {
+  for (const timer of timers.restore(snapshot)) answer(`${timer.label} timer is done.`);
+  renderTimers();
+});
+
+function saveTimers() {
+  timerStore.save(timers).catch((error) => console.error('Could not save timers', error));
+}
 
 function startTimer(label, seconds) {
   timers.add(label, seconds);
+  saveTimers();
   renderTimers();
   answer(`Timer set for ${speakDuration(seconds)}.`);
 }
@@ -156,6 +183,7 @@ function renderTimers() {
       remove.setAttribute('aria-label', `Remove ${timer.label} timer`);
       remove.addEventListener('click', () => {
         timers.remove(timer.id);
+        saveTimers();
         renderTimers();
       });
       return row;
@@ -165,27 +193,21 @@ function renderTimers() {
 
 /** "Stop" or "cancel the timer" silences finished timers. */
 function dismissFinishedTimers() {
-  if (timers.dismissFinished().length) renderTimers();
+  if (!timers.dismissFinished().length) return;
+  saveTimers();
+  renderTimers();
 }
 
+// The tick drives the countdown display; finishing is also noticed here when the panel is open.
 setInterval(() => {
-  for (const timer of timers.collectFinished()) answer(`${timer.label} timer is done.`);
+  const done = timers.collectFinished();
+  for (const timer of done) answer(`${timer.label} timer is done.`);
+  if (done.length) saveTimers();
   if (timers.shouldChime()) chime();
   if (timers.list.length) renderTimers();
 }, 500);
 
-function chime() {
-  const audio = new AudioContext();
-  for (const at of [0, 0.35, 0.7]) {
-    const tone = audio.createOscillator();
-    const gain = audio.createGain();
-    tone.frequency.value = 880;
-    gain.gain.value = 0.2;
-    tone.connect(gain).connect(audio.destination);
-    tone.start(audio.currentTime + at);
-    tone.stop(audio.currentTime + at + 0.2);
-  }
-}
+const chime = createChime();
 
 // ---------------------------------------------------------------------------
 // Commands
@@ -203,7 +225,7 @@ function answer(text) {
 }
 
 async function handle({ text, final, id }) {
-  if (handled.has(id)) return;
+  if (handled.has(id) || !connected) return;
   if (!recipe) {
     if (final) answer("I don't see a recipe on this tab. Open a recipe page first.");
     return;
@@ -215,7 +237,7 @@ async function handle({ text, final, id }) {
     intent = await interpret(jev, { transcript: text, final, recipe, step });
   } catch (error) {
     // A partial is speculative: only a final transcript is worth an error line.
-    if (final) logActivity(text, error instanceof JevError ? error.message : 'Something went wrong. Try again.', true);
+    if (final) failed(text, error);
     return;
   }
   if (!intent || handled.has(id)) return;
@@ -228,6 +250,14 @@ async function handle({ text, final, id }) {
   } finally {
     currentEntry = null;
   }
+}
+
+/** Shows and speaks an error: a cook with floury hands is not looking at the panel. */
+function failed(said, error) {
+  const message = error instanceof JevError ? error.message : 'Something went wrong. Try again.';
+  if (!(error instanceof JevError)) console.error(error);
+  logActivity(said, message, true);
+  speaker.say(message);
 }
 
 async function perform(intent) {
@@ -259,7 +289,7 @@ async function perform(intent) {
           needed.length ? `For this step: ${needed.join('. ')}.` : "This step doesn't use any listed ingredients.",
         );
       } catch (error) {
-        logActivity(null, error.message, true);
+        failed(null, error);
       }
       return;
     }
@@ -277,6 +307,7 @@ async function perform(intent) {
     }
     case 'timer_cancel': {
       const cancelled = timers.removeLatest();
+      saveTimers();
       renderTimers();
       if (!cancelled) return answer('No timers to cancel.');
       return answer(`${cancelled.finished ? 'Stopped' : 'Cancelled'} the ${cancelled.label} timer.`);
@@ -337,6 +368,7 @@ $('command-form').addEventListener('submit', (event) => {
   event.preventDefault();
   const text = $('command').value.trim();
   if (!text) return;
+  if (!connected) return chrome.runtime.openOptionsPage();
   queue.push({ text, final: true, id: `typed:${typedCount++}` });
   $('command').value = '';
 });
@@ -385,6 +417,19 @@ function showHeard(text, tone) {
   $('heard').className = tone ? `heard ${tone}` : 'heard';
 }
 
-$('mic').addEventListener('click', () => (listener.listening ? listener.stop() : listener.start()));
+$('mic').addEventListener('click', () => {
+  if (!connected) return chrome.runtime.openOptionsPage();
+  if (listener.listening) listener.stop();
+  else listener.start();
+});
+
+const TYPED_HINT = $('command').placeholder;
+await mountConnection($('connection'), $('open-settings'), (isConnected) => {
+  connected = isConnected;
+  if (!connected && listener.listening) listener.stop();
+  if (!listener.listening) $('mic-label').textContent = connected ? 'Start listening' : 'Connect Jev for voice';
+  $('command').placeholder = connected ? TYPED_HINT : 'Voice and typed commands need Jev · Connect';
+});
 
 render();
+renderTimers();

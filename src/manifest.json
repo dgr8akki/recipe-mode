@@ -6,7 +6,7 @@
   "description": "Cook hands-free on any recipe page: say \"next\", \"how much butter?\" or \"set a timer\".",
   "homepage_url": "https://github.com/dgr8akki/recipe-mode",
   "minimum_chrome_version": "116",
-  "permissions": ["sidePanel", "storage", "scripting"],
+  "permissions": ["alarms", "notifications", "sidePanel", "storage", "scripting"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js",

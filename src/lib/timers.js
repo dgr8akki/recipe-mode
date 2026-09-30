@@ -1,6 +1,8 @@
 /**
  * Kitchen timers. Pure state with an injectable clock so it can be tested
- * without waiting; the panel renders it and polls `collectFinished()`.
+ * without waiting; the panel renders it and polls `collectFinished()`. The
+ * state round-trips through `snapshot()`/`restore()` so it can live in
+ * extension storage and outlast the panel (see timer-store.js).
  *
  * @module lib/timers
  */
@@ -47,6 +49,20 @@ export class Timers {
     return timer;
   }
 
+  /**
+   * Marks one timer finished, as the service worker does when its alarm fires.
+   *
+   * @param {number} id
+   * @returns {Timer | undefined} The timer, only if it was still running.
+   */
+  finish(id) {
+    const timer = this.list.find((t) => t.id === id && !t.finished);
+    if (!timer) return undefined;
+    timer.finished = true;
+    this.lastChime = -Infinity;
+    return timer;
+  }
+
   /** Dismisses every finished timer. @returns {Timer[]} */
   dismissFinished() {
     const done = this.list.filter((t) => t.finished);
@@ -75,6 +91,26 @@ export class Timers {
     for (const t of done) t.finished = true;
     if (done.length) this.lastChime = -Infinity;
     return done;
+  }
+
+  /** Plain data for storage. @returns {{ list: Timer[], nextId: number }} */
+  snapshot() {
+    return { list: this.list.map((t) => ({ ...t })), nextId: this.nextId };
+  }
+
+  /**
+   * Replaces the state with a snapshot from storage.
+   *
+   * @param {{ list?: Timer[], nextId?: number }} snapshot
+   * @returns {Timer[]} Timers that finished elsewhere since this instance last saw them, so
+   *   the panel can announce them; `collectFinished()` will not report them again.
+   */
+  restore({ list = [], nextId = 1 } = {}) {
+    const known = new Map(this.list.map((t) => [t.id, t]));
+    const finishedElsewhere = list.filter((t) => t.finished && !known.get(t.id)?.finished);
+    this.list = list.map((t) => ({ ...t }));
+    this.nextId = Math.max(nextId, ...this.list.map((t) => t.id + 1));
+    return finishedElsewhere;
   }
 
   /**

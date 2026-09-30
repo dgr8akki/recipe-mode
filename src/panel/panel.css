@@ -579,9 +579,9 @@ body {
 .nav-button.primary {
   justify-content: space-between;
   padding: 0 16px;
-  background: var(--accent);
+  background: var(--accent-fill);
   color: var(--on-accent);
-  border-color: var(--accent);
+  border-color: var(--accent-fill);
 }
 
 .nav-button.primary:hover {

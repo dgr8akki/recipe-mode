@@ -53,7 +53,7 @@ Recipe Mode isn't on the Chrome Web Store yet. To install from source:
 3. Click **Load unpacked** and select the unzipped folder (or `src/` in a clone).
 4. Pin **Recipe Mode** from the puzzle-piece menu.
 
-You need either a [TypeSafe API key](https://console.typesafe.ai/keys) or a [Vercel AI Gateway API key](https://vercel.com/docs/ai-gateway/authentication-and-byok/api-keys). The settings page opens on install: pick your provider, paste the key and select **Connect**; it's checked before it's saved. Jev costs $0.042 per million input tokens (about $0.0001 per command). With Vercel, set a [spend limit](https://vercel.com/docs/ai-gateway/observability-and-spend/budgets) on the key.
+Following a recipe, Back and Next, step timers, the ingredient list and reading aloud work straight away; the settings page that opens on install has a **Try a sample recipe** button. Voice and typed commands need Jev, so for those you need either a [TypeSafe API key](https://console.typesafe.ai/keys) or a [Vercel AI Gateway API key](https://vercel.com/docs/ai-gateway/authentication-and-byok/api-keys): pick your provider, paste the key and select **Connect**; it's checked before it's saved. Jev costs $0.042 per million input tokens (about $0.0001 per command). With Vercel, set a [spend limit](https://vercel.com/docs/ai-gateway/observability-and-spend/budgets) on the key.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/options-dark.png" />
@@ -66,8 +66,8 @@ You need either a [TypeSafe API key](https://console.typesafe.ai/keys) or a [Ver
 ## Usage
 
 1. Open a recipe, then click the Recipe Mode icon to open the side panel.
-2. If you haven't connected a key yet, the panel shows **Connect Jev**; select it to open settings.
-3. Select **Start listening**. The first time, Chrome asks for microphone access in a new tab.
+2. Use **Back** and **Next**, tap a **Start the … timer** button, or open the ingredient list. None of this needs a key.
+3. For voice, connect a key: the microphone button reads **Connect Jev for voice** until you do. Then select **Start listening**. The first time, Chrome asks for microphone access in a new tab.
 
 | Say                                                          | What happens                                                   |
 | ------------------------------------------------------------ | -------------------------------------------------------------- |
@@ -88,9 +88,10 @@ You can type any command in the box under the microphone button.
 | `sidePanel`               | Shows the assistant next to the recipe                               |
 | `scripting`, `<all_urls>` | Reads the recipe on the tab you're viewing and highlights the step   |
 | `storage`                 | Keeps your API key and settings in this browser                      |
+| `alarms`, `notifications` | Rings a timer and shows a notice when the side panel is closed       |
 | Microphone                | Hears commands; audio is transcribed by the browser and never stored |
 
-Your transcript and the recipe's steps and ingredients are sent to TypeSafe to run Jev, directly or through Vercel AI Gateway, whichever you picked. Nothing else leaves your browser. See [PRIVACY.md](PRIVACY.md).
+While the side panel is open, Recipe Mode checks each page you view for a recipe (locally); only the recipe's steps and ingredients are ever sent. They go, with your transcript as you speak it, to TypeSafe to run Jev, directly or through Vercel AI Gateway, whichever you picked. Nothing else leaves your browser. See [PRIVACY.md](PRIVACY.md).
 
 ## Development
 
@@ -117,14 +118,16 @@ npm run package    # builds dist/recipe-mode-<version>.zip for the Chrome Web St
 ```
 src/
 ├── manifest.json
-├── background.js          Opens the side panel; locks the key to extension pages on Chrome 140+
+├── background.js          Opens the side panel; rings timers when the panel is closed
 ├── theme.css              Colour, type and button tokens shared by every page
 ├── fonts/                 Archivo (SIL OFL 1.1), bundled so nothing loads from the network
 ├── panel/                 Side panel UI (HTML, CSS, controller)
 ├── options/               Pick a provider; connect, test, replace or remove the key
 ├── permission/            One-time microphone permission page
+├── demo/                  Sample recipe page, opened from settings
 └── lib/
     ├── assistant.js       Builds Jev questions and turns answers into intents
+    ├── chime.js           The timer bell, on one shared AudioContext
     ├── durations.js       Finds cooking times in text ("1 ½ hours", "25-30 mins")
     ├── connection.js      "Connected via …" row; opens settings
     ├── jev.js             Jev client for TypeSafe or Vercel: retries, rate-limit pauses, clear errors
@@ -132,6 +135,7 @@ src/
     ├── queue.js           One request in flight; newest partial wins
     ├── speaker.js         Reads answers aloud; mutes the mic while talking
     ├── speech.js          Word-by-word speech recognition, on-device first
+    ├── timer-store.js     Keeps timers in session storage with an alarm each
     └── timers.js          Kitchen timers
 test/                      Unit tests (jsdom for page functions)
 evals/                     Live evaluation against Jev
@@ -154,7 +158,7 @@ evals/                     Live evaluation against Jev
 
 ## Limitations
 
-- Timers live in the side panel. Closing the panel clears them.
+- Timers keep running with the side panel closed and Chrome shows a notification when one ends, but they don't survive closing the browser. With the panel closed, a timer under 30 seconds can ring late.
 - While Recipe Mode is talking, only "stop" is heard, so it doesn't react to its own voice.
 - Reads the recipe from the page you open. It can't follow a recipe inside an embedded video.
 

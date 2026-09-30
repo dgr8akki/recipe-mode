@@ -4,7 +4,7 @@
  * badge with Test, Replace and Remove.
  */
 
-import { DEFAULT_PROVIDER, PROVIDERS, createJevClient, maskKey } from '../lib/jev.js';
+import { DEFAULT_PROVIDER, JevError, PROVIDERS, createJevClient, maskKey } from '../lib/jev.js';
 
 /** Setup steps per provider. Trusted constants, so innerHTML is fine. */
 const link = (href, text) => `<a href="${href}" target="_blank" rel="noreferrer">${text}</a>`;
@@ -58,28 +58,41 @@ radios.forEach((radio) =>
   }),
 );
 
-/** Resolves with an error message, or '' when the key works. */
+/** Resolves with the error, or null when the key works. */
 async function test(id, key) {
+  const { host } = PROVIDERS[id];
   try {
-    await createJevClient({ getKey: () => key, getProvider: () => id }).evaluate({
+    const answers = await createJevClient({ getKey: () => key, getProvider: () => id }).evaluate({
       state: 'ping',
       questions: {
         ok: { type: 'choice', instructions: 'Is this a test message?', criteria: { yes: 'Yes', no: 'No' } },
       },
     });
-    return '';
+    // The client makes sure every question got an answer; this makes sure the answer is one of ours.
+    if (!['yes', 'no'].includes(answers.ok.choice)) {
+      throw new JevError(`Unexpected reply from ${host}.`, { status: 200 });
+    }
+    return null;
   } catch (error) {
     // A busy provider still accepted the key.
-    return error.busy ? '' : error.message;
+    if (error.busy) return null;
+    console.error(`Key check with ${host} failed`, error);
+    return error;
   }
 }
 
-/** @param {'info' | 'ok' | 'error' | 'neutral'} [tone] */
-function setStatus(text, tone = 'info') {
+/**
+ * @param {'info' | 'ok' | 'error' | 'neutral'} [tone]
+ * @param {boolean} [invalid] Whether the key itself is what is wrong; an unreachable host is not the key's fault.
+ */
+function setStatus(text, tone = 'info', invalid = false) {
   status.textContent = text;
   status.className = `status ${tone}`;
-  input.setAttribute('aria-invalid', String(tone === 'error'));
+  input.setAttribute('aria-invalid', String(invalid));
 }
+
+/** Only a rejected (or missing) key is the input's fault. */
+const blamesKey = (error) => error.status === 401;
 
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
@@ -90,18 +103,20 @@ form.addEventListener('submit', async (event) => {
   setStatus(`Checking key with ${PROVIDERS[id].label}…`);
   const error = await test(id, key);
   button.disabled = false;
-  if (error) return setStatus(error, 'error');
+  if (error) return setStatus(error.message, 'error', blamesKey(error));
   apiKey = key;
   provider = id;
   await chrome.storage.local.set({ apiKey, provider });
   render();
+  // The form and its Connect button just disappeared under the cursor; land on the next thing to do.
+  document.getElementById('test').focus();
   setStatus(`Key works. ${document.body.dataset.next}`, 'ok');
 });
 
 document.getElementById('test').addEventListener('click', async () => {
   setStatus(`Checking key with ${PROVIDERS[provider].label}…`);
   const error = await test(provider, apiKey);
-  setStatus(error || 'Key works.', error ? 'error' : 'ok');
+  setStatus(error ? error.message : 'Key works.', error ? 'error' : 'ok', Boolean(error && blamesKey(error)));
 });
 
 document.getElementById('replace').addEventListener('click', () => {
@@ -111,6 +126,7 @@ document.getElementById('replace').addEventListener('click', () => {
 cancel.addEventListener('click', () => {
   setStatus('');
   render();
+  document.getElementById('replace').focus();
 });
 
 document.getElementById('remove').addEventListener('click', async () => {

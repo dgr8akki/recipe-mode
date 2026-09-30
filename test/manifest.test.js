@@ -25,7 +25,13 @@ describe('manifest', () => {
   });
 
   it('asks only for the permissions it uses', () => {
-    assert.deepEqual([...manifest.permissions].sort(), ['scripting', 'sidePanel', 'storage']);
+    assert.deepEqual([...manifest.permissions].sort(), [
+      'alarms',
+      'notifications',
+      'scripting',
+      'sidePanel',
+      'storage',
+    ]);
   });
 
   it('keeps the store description within 132 characters', () => {

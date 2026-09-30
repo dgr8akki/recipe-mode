@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { afterEach, describe, it } from 'node:test';
 
-import { extractRecipe, highlightStep } from '../src/lib/page.js';
+import { durations } from '../src/lib/durations.js';
+import { canScan, clearHighlight, extractRecipe, highlightStep } from '../src/lib/page.js';
 import { installDom } from './helpers.js';
 
 let restore = () => {};
@@ -65,6 +67,20 @@ describe('extractRecipe', () => {
     });
   });
 
+  it('reads the bundled sample recipe, which has a step timer to try', () => {
+    load(readFileSync(new URL('../src/demo/lemon-drizzle.html', import.meta.url), 'utf8'));
+    const recipe = extractRecipe();
+    assert.equal(recipe.title, 'Lemon drizzle cake');
+    assert.equal(recipe.steps.length, 7);
+    assert.ok(recipe.ingredients.length >= 6);
+    assert.ok(
+      recipe.steps.some((step) => durations(step).some((time) => time.seconds === 1800)),
+      'a step mentions 30 minutes, so the sample shows a Start the 30 mins timer button',
+    );
+    // The steps are also in the page body, so highlightStep can outline them.
+    assert.equal(highlightStep(recipe.steps[0]), true);
+  });
+
   it('returns null on pages without a recipe', () => {
     load('<html><head><title>News</title></head><body><h1>Headlines</h1><p>Nothing to cook.</p></body></html>');
     assert.equal(extractRecipe(), null);
@@ -98,8 +114,41 @@ describe('highlightStep', () => {
     assert.match(globalThis.document.getElementById('one').style.outline, /4px solid/);
   });
 
+  it('clears the outline and puts back the inline one the page had', () => {
+    load(page.replace('<li id="two">', '<li id="two" style="outline: 1px dotted green">'));
+    highlightStep('Cream the butter and sugar until light and fluffy.');
+    const two = globalThis.document.getElementById('two');
+    assert.match(two.style.outline, /4px solid/);
+
+    assert.equal(clearHighlight(), 1);
+    assert.equal(two.style.outline, '1px dotted green');
+    assert.equal(two.style.outlineOffset, '');
+    assert.equal(two.hasAttribute('data-recipe-mode-outline'), false);
+    assert.equal(clearHighlight(), 0, 'nothing left to clear');
+  });
+
   it('reports steps that are not on the page', () => {
     load(page);
     assert.equal(highlightStep('Garnish with parsley.'), false);
+  });
+});
+
+describe('canScan', () => {
+  const own = 'chrome-extension://abcdefghijklmnop/';
+  it("only injects into web pages and the extension's own sample recipe", () => {
+    assert.equal(canScan('https://www.bbcgoodfood.com/recipes/lemon-drizzle', own), true);
+    assert.equal(canScan('http://intranet.local/recipes', own), true);
+    assert.equal(canScan(`${own}demo/lemon-drizzle.html`, own), true);
+    for (const url of [
+      'chrome://extensions',
+      'chrome://newtab/',
+      'about:blank',
+      'file:///tmp/recipe.html',
+      '',
+      undefined,
+    ]) {
+      assert.equal(canScan(url, own), false, String(url));
+    }
+    assert.equal(canScan('chrome-extension://otherextension/page.html', own), false, "someone else's extension");
   });
 });
