@@ -85,7 +85,7 @@ export function createListener({ onTranscript, onError, onStatus = () => {}, onN
     };
     // Chrome ends continuous recognition after a stretch of silence.
     r.onend = () => {
-      if (listening) r.start();
+      if (listening) tryStart(r);
     };
     r.onerror = (event) => {
       if (BENIGN_ERRORS.has(event.error)) return;
@@ -98,14 +98,30 @@ export function createListener({ onTranscript, onError, onStatus = () => {}, onN
     return r;
   }
 
+  /**
+   * `start()` throws (InvalidStateError and friends) when the recogniser is in a state it does not
+   * like. Left alone that meant `listening` stayed true over a dead recogniser, which a cook with
+   * messy hands would not notice for a while.
+   */
+  function tryStart(r) {
+    try {
+      r.start();
+      return true;
+    } catch {
+      listening = false;
+      onStatus({ listening, mode });
+      onError({ code: 'start-failed', message: 'Listening stopped. Tap the microphone to start again.' });
+      return false;
+    }
+  }
+
   async function start() {
     if (unsupportedReason) return onError({ code: 'unsupported', message: unsupportedReason });
     if (listening) return;
     await chooseMode();
     recognition ??= build();
     listening = true;
-    recognition.start();
-    onStatus({ listening, mode });
+    if (tryStart(recognition)) onStatus({ listening, mode });
   }
 
   function stop() {

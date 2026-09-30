@@ -26,9 +26,37 @@ function contrast(a, b) {
 /** Declarations inside the rule for `selector`. */
 const rule = (css, selector) => css.match(new RegExp(`${selector.replace(/[.]/g, '\\.')}\\s*\\{([^}]*)\\}`))[1];
 
+/** Composites an `rgb(r g b / a)` colour over a #rrggbb background. */
+function over(rgba, hexBg) {
+  const [r, g, b, a] = rgba.match(/[\d.]+/g).map(Number);
+  const bg = [1, 3, 5].map((i) => parseInt(hexBg.slice(i, i + 2), 16));
+  const mix = [r, g, b].map((c, i) => Math.round(c * a + bg[i] * (1 - a)));
+  return `#${mix.map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+}
+
 describe('theme', () => {
   const light = tokens(theme, ':root');
   const dark = tokens(theme, 'prefers-color-scheme: dark');
+
+  it('draws input and tile borders at 3:1 or better in light mode', () => {
+    // --rule is the only boundary of the command input, the key input, the provider tiles and the settings button.
+    for (const surface of ['--bg', '--surface']) {
+      const ratio = contrast(over(light['--rule'], light[surface]), light[surface]);
+      assert.ok(ratio >= 3, `--rule on ${surface} is ${ratio.toFixed(2)}:1`);
+    }
+  });
+
+  it('gives placeholders the muted ink instead of the browser grey', () => {
+    assert.match(theme, /::placeholder \{\s*color: var\(--muted\);\s*opacity: 1;/);
+    for (const [name, t] of Object.entries({ light, dark })) {
+      const ratio = contrast(t['--muted'], t['--surface']);
+      assert.ok(ratio >= 4.5, `${name} placeholder is ${ratio.toFixed(2)}:1`);
+    }
+  });
+
+  it('does not use the error red for the command input focus ring', () => {
+    assert.match(rule(panel, '.command input:focus-visible'), /outline-color: var\(--ink\)/);
+  });
 
   it('fills primary buttons with a red that passes 4.5:1 against their text', () => {
     // Connect buttons are 18px bold, just under large text, so the normal-text threshold applies.

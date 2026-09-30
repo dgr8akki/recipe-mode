@@ -250,6 +250,10 @@ form {
   min-width: 140px;
 }
 
+.row #reveal {
+  min-width: 96px;
+}
+
 /* Connected card */
 
 .connected {

@@ -6,15 +6,30 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Added
 
+- A **Show** button next to the API key field reveals what you pasted; it goes back to hidden when the form closes.
+- A "Thinking…" line appears the moment a command is sent and turns into the outcome; the recording dot breathes while a request is in flight (not under reduced motion).
 - Settings has a **Try a sample recipe** button that opens a bundled lemon drizzle cake page, so the panel has something to read straight after install.
 
 ### Changed
 
+- Timers set by saying a time read "Your timer: 12 minutes"; only a step's own time is labelled "Step 6: …".
+- The panel scrolls rather than hiding its controls when they do not fit (200 % zoom, a short window, several timers): the dock and timer rail cap their height, and the send button for typed commands is visible at every width.
+- Each spoken word no longer carries the whole recipe to Jev: the step question offers the ten steps either side of the current one, ingredients stop at 40, and partial phrases wait 150 ms to settle before one is sent.
+- The settings page, connection row, permission page and Jev client are copies of one shared source (see SHARED.md). While a key check runs the field is read-only and the button shows it is busy; setup links say they open in a new tab; a rejected key's error clears as you type.
 - The panel no longer opens its settings drawer and stops at "Connect Jev" when there is no key. Following the recipe, Back and Next, step timers, the ingredient list and reading aloud work without one; the microphone button reads "Connect Jev for voice" and the command box says what needs a key.
 - Timers no longer die with the side panel. They are kept in session storage with a Chrome alarm each; when the panel is closed a finished timer shows a notification (click it to dismiss), and when it is open the panel chimes and speaks as before. Needs the `alarms` and `notifications` permissions.
 
 ### Fixed
 
+- The settings page no longer says "Key works." when the provider answers 429: the key is saved (a rate limit means it was checked) and the page says the provider is busy.
+- The panel returns to "Open a recipe to start" when the recipe tab is closed, instead of staying on a step nobody can see.
+- A command said while Recipe Mode is talking is kept and run when it stops, with "Wait for me to finish, or say \"stop\"" shown meanwhile; before, it was dropped without a trace.
+- If the browser has no speech voice, read-aloud is unticked and says so; a failed readout frees the microphone at once instead of muting it for the length of the text.
+- If speech recognition cannot restart after Chrome ends a session, the panel says "Listening stopped. Tap the microphone to start again." instead of pretending to listen.
+- A step choice that is not one of the recipe's can no longer produce "Step NaN"; unanswered questions read as "not for us".
+- Light-mode borders on inputs and tiles, placeholder text and the command field's focus ring all pass their contrast thresholds; the settings section is a named landmark; the settings page keeps every element inside a landmark.
+- Highlighting a step reads each element's text once instead of forcing layout for every paragraph on the page.
+- A recipe whose JSON-LD has a `HowToSection` with no steps no longer shows the section name as a step.
 - The privacy policy, README and the panel's empty state now say plainly that the open panel checks each page you view for a recipe, locally, and that requests go out per spoken phrase. The panel also skips `chrome://`, `file://` and other extensions' pages up front instead of trying to inject into them.
 - The timer bell no longer opens a new AudioContext on every chime and leaves it running; a ringing timer used to pile up dozens of live audio contexts. One context is shared and closed after the beeps.
 - Closing the side panel, or moving it to another recipe, clears the red step outline from the page instead of leaving the last step boxed.

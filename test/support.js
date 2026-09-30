@@ -65,13 +65,20 @@ export function fakeAlarms() {
  *
  * @param {{ local?: object, session?: object, panels?: number }} [options]
  */
-export function fakeChrome({ local = {}, session = {}, panels = 0 } = {}) {
+export function fakeChrome({ local = {}, session = {}, panels = 0, tabs = [], pageResults = {} } = {}) {
   const notifications = { shown: [], cleared: [], listeners: [] };
   const opened = [];
   const openedTabs = [];
+  const injected = [];
+  const tabListeners = { onActivated: [], onUpdated: [], onRemoved: [] };
+  const event = (name) => ({
+    addListener: (fn) => tabListeners[name].push(fn),
+    fire: (...args) => tabListeners[name].forEach((fn) => fn(...args)),
+  });
   return {
     opened,
     openedTabs,
+    injected,
     notifications: {
       shown: notifications.shown,
       cleared: notifications.cleared,
@@ -93,7 +100,21 @@ export function fakeChrome({ local = {}, session = {}, panels = 0 } = {}) {
     },
     alarms: fakeAlarms(),
     sidePanel: { setPanelBehavior() {} },
-    tabs: { create: (options) => openedTabs.push(options) },
+    tabs: {
+      create: (options) => openedTabs.push(options),
+      query: async () => tabs,
+      onActivated: event('onActivated'),
+      onUpdated: event('onUpdated'),
+      onRemoved: event('onRemoved'),
+    },
+    /** Injected page functions are answered by name from `pageResults` (a value or a function of the args). */
+    scripting: {
+      async executeScript({ target, func, args = [] }) {
+        injected.push({ tabId: target.tabId, func: func.name, args });
+        const result = pageResults[func.name];
+        return [{ result: typeof result === 'function' ? result(...args) : result }];
+      },
+    },
     runtime: {
       onInstalled: { addListener() {} },
       openOptionsPage: () => opened.push('options'),
@@ -120,6 +141,8 @@ export function installPage(html, chrome) {
     'HTMLButtonElement',
     'Event',
     'InputEvent',
+    'MutationObserver',
+    'HTMLLIElement',
     'chrome',
   ];
   // defineProperty, not assignment: Node exposes `navigator` through a getter-only accessor.

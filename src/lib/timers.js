@@ -16,6 +16,17 @@
  * @property {boolean} finished
  */
 
+/**
+ * What a timer is called in the rail. A time the cook said out loud is theirs, not the step's:
+ * "Step 6: 12 minutes" next to "Step 6: 20 minutes" implied the step mentioned both.
+ *
+ * @param {{ label: string }} time
+ * @param {{ step: number, spoken: boolean }} source Zero-based step.
+ */
+export function timerLabel(time, { step, spoken }) {
+  return spoken ? `Your timer: ${time.label}` : `Step ${step + 1}: ${time.label}`;
+}
+
 export class Timers {
   /** @param {{ now?: () => number }} [options] */
   constructor({ now = () => Date.now() } = {}) {

@@ -9,9 +9,9 @@ async function requestMicrophone() {
     status.textContent = 'Microphone allowed. Close this tab and press Start listening in the side panel.';
     status.className = 'status ok';
     allow.disabled = true;
-  } catch {
-    status.textContent =
-      'Microphone blocked. Click the icon at the left of the address bar, set Microphone to Allow, then press Allow microphone again.';
+  } catch (error) {
+    // The name (NotAllowedError, NotFoundError, …) tells support which of Chrome's dialogs the user saw.
+    status.textContent = `Microphone blocked (${error.name}). Click the icon at the left of the address bar, set Microphone to Allow, then press Allow microphone again.`;
     status.className = 'status error';
   }
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { Timers } from '../src/lib/timers.js';
+import { Timers, timerLabel } from '../src/lib/timers.js';
 
 describe('Timers', () => {
   it('counts down and finishes each timer exactly once', () => {
@@ -112,5 +112,12 @@ describe('Timers persistence', () => {
     assert.equal(timers.finish(eggs.id), undefined);
     assert.equal(timers.finish(99), undefined);
     assert.equal(timers.shouldChime(), true);
+  });
+});
+
+describe('timerLabel', () => {
+  it('credits the step for its own time and the cook for a spoken one', () => {
+    assert.equal(timerLabel({ label: '20 minutes' }, { step: 5, spoken: false }), 'Step 6: 20 minutes');
+    assert.equal(timerLabel({ label: '12 minutes' }, { step: 5, spoken: true }), 'Your timer: 12 minutes');
   });
 });

@@ -8,15 +8,20 @@
     <link rel="stylesheet" href="options.css" />
     <script type="module" src="options.js"></script>
     <script type="module" src="sample.js"></script>
+    <script type="module" src="reveal.js"></script>
   </head>
-  <body data-next="Open a recipe, then the Recipe Mode side panel.">
+  <body data-app="Recipe Mode" data-next="Open a recipe, then the Recipe Mode side panel.">
     <div class="page">
-      <header class="brandbar">Recipe Mode · Settings</header>
-
-      <section class="hero">
-        <h1>Recipe Mode</h1>
-        <p>Hands-free cooking: follow a recipe, set timers and ask questions by voice.</p>
-      </section>
+      <header>
+        <div class="brandbar">Recipe Mode · Settings</div>
+        <div class="hero">
+          <div>
+            <p id="kicker" class="label"></p>
+            <h1>Recipe Mode</h1>
+          </div>
+          <p>Hands-free cooking: follow a recipe, set timers and ask questions by voice.</p>
+        </div>
+      </header>
 
       <main class="section" aria-labelledby="connect-title">
         <div class="section-head">
@@ -41,6 +46,7 @@
               <button id="replace" type="button" class="btn">Replace</button>
               <button id="remove" type="button" class="btn danger">Remove</button>
             </div>
+            <p id="connected-status" class="status" role="status"></p>
           </div>
 
           <form id="key-form" hidden>
@@ -76,9 +82,10 @@
                   type="password"
                   autocomplete="off"
                   spellcheck="false"
-                  aria-describedby="status"
+                  aria-describedby="key-status"
                   required
                 />
+                <button id="reveal" type="button" class="btn" aria-pressed="false" aria-controls="api-key">Show</button>
                 <button type="submit" class="btn primary">
                   Connect
                   <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2.5" aria-hidden="true">
@@ -88,9 +95,8 @@
                 <button id="cancel" type="button" class="btn" hidden>Cancel</button>
               </div>
             </div>
+            <p id="key-status" class="status" role="status"></p>
           </form>
-
-          <p id="status" class="status" role="status"></p>
         </div>
       </main>
 

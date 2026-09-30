@@ -28,7 +28,7 @@ describe('interpret', () => {
   it('returns the action with the step and ingredient Jev picked', async () => {
     const jev = fakeJev(() => answers({ action: 'amount', ingredient: 'i0' }));
     const intent = await interpret(jev, { transcript: 'how much butter', final: true, recipe, step: 1 });
-    assert.deepEqual(intent, { action: 'amount', step: null, ingredient: 0, time: null });
+    assert.deepEqual(intent, { action: 'amount', step: null, ingredient: 0, time: null, timeSpoken: false });
   });
 
   it('sends the current step as context', async () => {
@@ -62,10 +62,13 @@ describe('interpret', () => {
       assert.ok(jev.calls[0].questions.time, 'asks which time');
     });
 
-    it('prefers a time said out loud', async () => {
+    it('prefers a time said out loud, and says so', async () => {
       const jev = fakeJev(() => answers({ action: 'timer' }));
       const intent = await interpret(jev, { transcript: 'set a timer for 12 minutes', final: true, recipe, step: 2 });
       assert.equal(intent.time.seconds, 720);
+      assert.equal(intent.timeSpoken, true);
+      const fromStep = await interpret(jev, { transcript: 'set a timer', final: true, recipe, step: 2 });
+      assert.equal(fromStep.timeSpoken, false);
     });
 
     it('returns no time when the step has none and none was said', async () => {
@@ -103,7 +106,54 @@ describe('interpret', () => {
   });
 });
 
+describe('robustness to odd answers', () => {
+  it('treats a missing action or complete answer as "not for us" instead of throwing', async () => {
+    const missingAll = await interpret(
+      fakeJev(() => ({})),
+      { transcript: 'next', final: true, recipe, step: 0 },
+    );
+    assert.equal(missingAll.action, 'none');
+    const partial = await interpret(
+      fakeJev(() => ({ action: choice('prev', 0.95) })),
+      {
+        transcript: 'go',
+        final: false,
+        recipe,
+        step: 0,
+      },
+    );
+    assert.equal(partial, null, 'no complete answer on a partial means wait');
+  });
+
+  it('ignores a step or ingredient choice that is not one of ours', async () => {
+    const jev = fakeJev(() => answers({ action: 'goto', step: 'step-4', ingredient: 'butter' }));
+    const intent = await interpret(jev, { transcript: 'go to step four', final: true, recipe, step: 0 });
+    assert.equal(intent.action, 'goto');
+    assert.equal(intent.step, null);
+    assert.equal(intent.ingredient, null);
+  });
+});
+
 describe('buildQuestions', () => {
+  it('offers only the steps near the current one on a long recipe', () => {
+    const long = { ...recipe, steps: Array.from({ length: 60 }, (_, i) => `Step text ${i + 1}`) };
+    const middle = buildQuestions({ recipe: long, stepTimes: [], final: true, step: 30 });
+    const keys = Object.keys(middle.step.criteria);
+    assert.equal(keys.length, 21 + 1, '±10 around the current step, plus none');
+    assert.ok(keys.includes('s20') && keys.includes('s40') && keys.includes('none'));
+    assert.ok(!keys.includes('s19') && !keys.includes('s41'));
+
+    const start = buildQuestions({ recipe: long, stepTimes: [], final: true, step: 0 });
+    assert.deepEqual(Object.keys(start.step.criteria).slice(0, 2), ['s0', 's1']);
+    assert.equal(Object.keys(start.step.criteria).length, 11 + 1);
+  });
+
+  it('caps the ingredient options like ingredientsForStep does', () => {
+    const many = { ...recipe, ingredients: Array.from({ length: 70 }, (_, i) => `ingredient ${i}`) };
+    const q = buildQuestions({ recipe: many, stepTimes: [], final: true, step: 0 });
+    assert.equal(Object.keys(q.ingredient.criteria).length, 40 + 1);
+  });
+
   it('describes every action, step and ingredient', () => {
     const q = buildQuestions({ recipe, stepTimes: [], final: true });
     assert.deepEqual(q.action.criteria, ACTIONS);

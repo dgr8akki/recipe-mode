@@ -10,15 +10,17 @@ import { getConnection, mountConnection } from '../lib/connection.js';
 import { JevError, createJevClient } from '../lib/jev.js';
 import { canScan, clearHighlight, extractRecipe, highlightStep } from '../lib/page.js';
 import { createTranscriptQueue } from '../lib/queue.js';
+import { createRecentSet } from '../lib/recent.js';
 import { createSpeaker } from '../lib/speaker.js';
 import { createListener } from '../lib/speech.js';
 import { createTimerStore } from '../lib/timer-store.js';
-import { Timers } from '../lib/timers.js';
+import { Timers, timerLabel } from '../lib/timers.js';
 
 const $ = (id) => document.getElementById(id);
 const MAX_ACTIVITY = 30;
 const STOP_WORDS = /\b(stop|quiet|shut up|pause)\b/i;
 const LONG_STEP = 180; // characters; longer steps drop a size so they fit without scrolling
+const PARTIAL_DEBOUNCE_MS = 150; // recognition emits a partial per word; wait for the burst to settle
 
 // ---------------------------------------------------------------------------
 // Settings
@@ -27,7 +29,29 @@ const jev = createJevClient({
   getKey: async () => (await getConnection()).apiKey,
   getProvider: async () => (await getConnection()).provider,
 });
-const speaker = createSpeaker({ enabled: () => $('read-aloud').checked });
+/** A final transcript heard while Recipe Mode was talking; runs once it has finished (see onIdle). */
+let heldTranscript = null;
+const speaker = createSpeaker({
+  enabled: () => $('read-aloud').checked,
+  onError: (message) => logActivity(null, message, true),
+  onVoices: (available) => {
+    if (!available) readAloudUnavailable();
+  },
+  onIdle() {
+    if (!heldTranscript) return;
+    const transcript = heldTranscript;
+    heldTranscript = null;
+    queue.push(transcript);
+  },
+});
+
+function readAloudUnavailable() {
+  if (!$('read-aloud').checked) return;
+  $('read-aloud').checked = false;
+  logActivity(null, "Read aloud isn't available in this browser: no speech voices are installed.", true);
+}
+// Chrome can report an empty voice list for a moment after load, so give it a little time before saying so.
+if (!speaker.available) setTimeout(() => !speaker.available && readAloudUnavailable(), 3000);
 
 const settings = await chrome.storage.local.get('readAloud');
 $('read-aloud').checked = settings.readAloud !== false;
@@ -77,6 +101,15 @@ window.addEventListener('pagehide', () => {
 });
 
 chrome.tabs.onActivated.addListener(loadRecipeFromActiveTab);
+// The recipe went with its tab: back to the empty state rather than a step nobody can see.
+chrome.tabs.onRemoved.addListener((tabId) => {
+  if (tabId !== recipeTabId) return;
+  recipe = null;
+  recipeTabId = null;
+  recipeUrl = null;
+  step = 0;
+  render();
+});
 chrome.tabs.onUpdated.addListener((_id, info, tab) => {
   if (info.status === 'complete' && tab.active) loadRecipeFromActiveTab();
 });
@@ -101,6 +134,7 @@ function render() {
   if (!recipe) return;
 
   $('title').textContent = recipe.title;
+  $('title').title = recipe.title; // the heading clamps at two lines
   $('step-count').textContent = `Step ${step + 1} of ${recipe.steps.length}`;
   $('step-text').textContent = recipe.steps[step];
   $('step-text').classList.toggle('long', recipe.steps[step].length > LONG_STEP);
@@ -115,7 +149,7 @@ function render() {
       button.type = 'button';
       button.innerHTML = STOPWATCH;
       button.append(`Start the ${time.label} timer`);
-      button.addEventListener('click', () => startTimer(`Step ${step + 1}: ${time.label}`, time.seconds));
+      button.addEventListener('click', () => startTimer(timerLabel(time, { step, spoken: false }), time.seconds));
       return button;
     }),
   );
@@ -171,6 +205,7 @@ function startTimer(label, seconds) {
 }
 
 function renderTimers() {
+  syncTick();
   const finishedFirst = [...timers.list].sort((a, b) => Number(b.finished) - Number(a.finished));
   $('timers').replaceChildren(
     ...finishedFirst.map((timer) => {
@@ -199,20 +234,27 @@ function dismissFinishedTimers() {
 }
 
 // The tick drives the countdown display; finishing is also noticed here when the panel is open.
-setInterval(() => {
+// It only runs while there is a timer to show: renderTimers() is called after every change.
+let tick = null;
+function syncTick() {
+  if (timers.list.length && tick === null) tick = setInterval(onTick, 500);
+  if (!timers.list.length && tick !== null) tick = clearInterval(tick) ?? null;
+}
+function onTick() {
   const done = timers.collectFinished();
   for (const timer of done) answer(`${timer.label} timer is done.`);
   if (done.length) saveTimers();
   if (timers.shouldChime()) chime();
-  if (timers.list.length) renderTimers();
-}, 500);
+  renderTimers();
+}
 
 const chime = createChime();
 
 // ---------------------------------------------------------------------------
 // Commands
 
-const handled = new Set();
+/** Utterance ids already acted on, so a final does not repeat what its partial did. */
+const handled = createRecentSet(100);
 /** Activity entry of the command being handled; answers are shown under it. */
 let currentEntry = null;
 
@@ -232,19 +274,28 @@ async function handle({ text, final, id }) {
   }
 
   const started = performance.now();
+  // Something on screen the moment a command is sent; partials stay quiet until they act.
+  const pending = final ? logActivity(text, 'Thinking…') : null;
   let intent;
+  thinking(+1);
   try {
     intent = await interpret(jev, { transcript: text, final, recipe, step });
   } catch (error) {
     // A partial is speculative: only a final transcript is worth an error line.
-    if (final) failed(text, error);
+    if (final) failed(text, error, pending);
+    return;
+  } finally {
+    thinking(-1);
+  }
+  if (!intent || handled.has(id)) {
+    pending?.remove(); // a partial already did this
     return;
   }
-  if (!intent || handled.has(id)) return;
   handled.add(id);
 
   const ms = Math.round(performance.now() - started);
-  currentEntry = logActivity(text, `${describe(intent)} in ${ms} ms${final ? '' : ', before you finished'}`);
+  currentEntry = pending ?? logActivity(text, '');
+  setResult(currentEntry, `${describe(intent)} in ${ms} ms${final ? '' : ', before you finished'}`);
   try {
     await perform(intent);
   } finally {
@@ -253,11 +304,19 @@ async function handle({ text, final, id }) {
 }
 
 /** Shows and speaks an error: a cook with floury hands is not looking at the panel. */
-function failed(said, error) {
+function failed(said, error, entry = null) {
   const message = error instanceof JevError ? error.message : 'Something went wrong. Try again.';
   if (!(error instanceof JevError)) console.error(error);
-  logActivity(said, message, true);
+  if (entry) setResult(entry, message, true);
+  else logActivity(said, message, true);
   speaker.say(message);
+}
+
+/** Requests in flight; while there are any the panel shows it (rec dot pulses, heard line gets an ellipsis). */
+let inFlight = 0;
+function thinking(delta) {
+  inFlight += delta;
+  document.body.classList.toggle('thinking', inFlight > 0);
 }
 
 async function perform(intent) {
@@ -270,8 +329,10 @@ async function perform(intent) {
       return showStep(step);
     case 'restart':
       return showStep(0);
-    case 'goto':
-      return intent.step === null ? answer('Which step?') : showStep(intent.step);
+    case 'goto': {
+      const known = Number.isInteger(intent.step) && intent.step >= 0 && intent.step < recipe.steps.length;
+      return known ? showStep(intent.step) : answer('Which step?');
+    }
     case 'amount':
       return answer(
         intent.ingredient === null ? "I couldn't find that in the ingredients." : recipe.ingredients[intent.ingredient],
@@ -295,7 +356,7 @@ async function perform(intent) {
     }
     case 'timer':
       return intent.time
-        ? startTimer(`Step ${step + 1}: ${intent.time.label}`, intent.time.seconds)
+        ? startTimer(timerLabel(intent.time, { step, spoken: intent.timeSpoken }), intent.time.seconds)
         : answer('For how long?');
     case 'timer_left': {
       const running = timers.running();
@@ -361,6 +422,13 @@ function logActivity(said, result, isError = false) {
   return item;
 }
 
+/** Replaces the outcome line of an activity entry, e.g. "Thinking…" with what happened. */
+function setResult(item, text, isError = false) {
+  const span = item.querySelector('.result, .error');
+  span.className = isError ? 'error' : 'result';
+  span.textContent = text;
+}
+
 const queue = createTranscriptQueue(handle);
 
 let typedCount = 0;
@@ -376,18 +444,25 @@ $('command-form').addEventListener('submit', (event) => {
 // ---------------------------------------------------------------------------
 // Microphone
 
+let partialTimer = null;
 const listener = createListener({
   onTranscript(transcript) {
     // While we talk, the mic mostly hears us: only a local "stop" gets through (no Jev call).
+    // A finished phrase is kept for when we stop talking rather than silently dropped.
     if (speaker.speaking) {
       if (STOP_WORDS.test(transcript.text)) {
         speaker.cancel();
         dismissFinishedTimers();
+      } else if (transcript.final) {
+        heldTranscript = transcript;
+        showHeard('Wait for me to finish, or say "stop".');
       }
       return;
     }
     showHeard(transcript.text, 'live');
-    queue.push(transcript);
+    clearTimeout(partialTimer);
+    if (transcript.final) queue.push(transcript);
+    else partialTimer = setTimeout(() => queue.push(transcript), PARTIAL_DEBOUNCE_MS);
   },
   onError({ code, message }) {
     if (code === 'not-allowed') {
@@ -397,6 +472,7 @@ const listener = createListener({
       return;
     }
     logActivity(null, message, true);
+    speaker.say(message); // the cook may not be looking
   },
   onStatus({ listening, mode }) {
     $('mic').setAttribute('aria-pressed', String(listening));
@@ -424,11 +500,16 @@ $('mic').addEventListener('click', () => {
 });
 
 const TYPED_HINT = $('command').placeholder;
-await mountConnection($('connection'), $('open-settings'), (isConnected) => {
-  connected = isConnected;
-  if (!connected && listener.listening) listener.stop();
-  if (!listener.listening) $('mic-label').textContent = connected ? 'Start listening' : 'Connect Jev for voice';
-  $('command').placeholder = connected ? TYPED_HINT : 'Voice and typed commands need Jev · Connect';
+await mountConnection($('connection'), $('open-settings'), {
+  primaryClass: 'primary',
+  secondaryClass: 'secondary',
+  onChange(isConnected) {
+    connected = isConnected;
+    $('connection').parentElement.classList.toggle('connected', connected);
+    if (!connected && listener.listening) listener.stop();
+    if (!listener.listening) $('mic-label').textContent = connected ? 'Start listening' : 'Connect Jev for voice';
+    $('command').placeholder = connected ? TYPED_HINT : 'Voice and typed commands need Jev · Connect';
+  },
 });
 
 render();

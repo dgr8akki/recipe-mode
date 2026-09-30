@@ -49,6 +49,8 @@ export const THRESHOLDS = { act: 0.5, early: 0.8, earlyNoArgs: 0.9, complete: 0.
 
 const MAX_OPTION_CHARS = 140;
 const MAX_INGREDIENT_QUESTIONS = 40;
+/** Steps offered either side of the current one. Cooks refer to nearby steps; 60 steps per word is a lot of bytes. */
+const STEP_WINDOW = 10;
 
 /**
  * @typedef {object} Recipe
@@ -63,6 +65,7 @@ const MAX_INGREDIENT_QUESTIONS = 40;
  * @property {number | null} step Zero-based step the cook referred to, if any.
  * @property {number | null} ingredient Index into `recipe.ingredients`, if any.
  * @property {import('./durations.js').Duration | null} time
+ * @property {boolean} timeSpoken Whether `time` was said by the cook rather than read from the step.
  */
 
 /**
@@ -80,14 +83,15 @@ export async function interpret(jev, { transcript, final, recipe, step }) {
       totalSteps: recipe.steps.length,
       currentStepText: currentStep,
     },
-    questions: buildQuestions({ recipe, stepTimes, final }),
+    questions: buildQuestions({ recipe, stepTimes, final, step }),
   });
 
-  const action = answers.action.choice;
-  const confidence = answers.action.confidence;
-  if (!final && !readyEarly(action, confidence, answers.complete.probability)) return null;
+  // A provider mid-change can leave a question unanswered; that is "not for us", never a crash.
+  const action = ACTIONS[answers.action?.choice] ? answers.action.choice : 'none';
+  const confidence = Number(answers.action?.confidence) || 0;
+  if (!final && !readyEarly(action, confidence, Number(answers.complete?.probability) || 0)) return null;
   if (action === 'none' || confidence < THRESHOLDS.act) {
-    return { action: 'none', step: null, ingredient: null, time: null };
+    return { action: 'none', step: null, ingredient: null, time: null, timeSpoken: false };
   }
 
   // A time said out loud wins; otherwise the step's own time (Jev picks when there are several).
@@ -98,6 +102,7 @@ export async function interpret(jev, { transcript, final, recipe, step }) {
     step: pick(answers.step),
     ingredient: pick(answers.ingredient),
     time: spoken ?? fromStep ?? null,
+    timeSpoken: Boolean(spoken),
   };
 }
 
@@ -124,9 +129,11 @@ export async function ingredientsForStep(jev, recipe, step) {
   return candidates.filter((_, i) => answers[`i${i}`].probability >= 0.5);
 }
 
-/** @param {{ recipe: Recipe, stepTimes: import('./durations.js').Duration[], final: boolean }} input */
-export function buildQuestions({ recipe, stepTimes, final }) {
+/** @param {{ recipe: Recipe, stepTimes: import('./durations.js').Duration[], final: boolean, step?: number }} input */
+export function buildQuestions({ recipe, stepTimes, final, step = 0 }) {
   const clip = (text) => (text.length > MAX_OPTION_CHARS ? `${text.slice(0, MAX_OPTION_CHARS)}…` : text);
+  const from = Math.max(0, step - STEP_WINDOW);
+  const nearby = recipe.steps.slice(from, step + STEP_WINDOW + 1).map((text, i) => [from + i, text]);
   return {
     action: {
       type: 'choice',
@@ -137,7 +144,7 @@ export function buildQuestions({ recipe, stepTimes, final }) {
       type: 'choice',
       instructions: 'Which step does the cook refer to, by number or by what happens in it?',
       criteria: {
-        ...Object.fromEntries(recipe.steps.map((text, i) => [`s${i}`, `Step ${i + 1}: ${clip(text)}`])),
+        ...Object.fromEntries(nearby.map(([i, text]) => [`s${i}`, `Step ${i + 1}: ${clip(text)}`])),
         none: 'No specific step',
       },
     },
@@ -145,7 +152,9 @@ export function buildQuestions({ recipe, stepTimes, final }) {
       type: 'choice',
       instructions: 'Which ingredient does the cook ask about?',
       criteria: {
-        ...Object.fromEntries(recipe.ingredients.map((line, i) => [`i${i}`, clip(line)])),
+        ...Object.fromEntries(
+          recipe.ingredients.slice(0, MAX_INGREDIENT_QUESTIONS).map((line, i) => [`i${i}`, clip(line)]),
+        ),
         none: 'No ingredient mentioned',
       },
     },
@@ -175,7 +184,8 @@ function readyEarly(action, confidence, completeProbability) {
   return EARLY_OK.has(action) && confidence >= THRESHOLDS.early && completeProbability >= THRESHOLDS.complete;
 }
 
-/** "s3" → 3; `null` for "none" or a question that wasn't asked. */
+/** "s3" → 3; `null` for "none", a question that wasn't asked, or a choice that is not one of ours. */
 function pick(answer) {
-  return answer && answer.choice !== 'none' ? Number(answer.choice.slice(1)) : null;
+  const match = /^[sid](\d+)$/.exec(answer?.choice ?? '');
+  return match ? Number(match[1]) : null;
 }

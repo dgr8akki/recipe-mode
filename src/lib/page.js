@@ -65,6 +65,8 @@ export function extractRecipe() {
       } else if (Array.isArray(item)) item.forEach(addSteps);
       else if (item.itemListElement)
         addSteps(item.itemListElement); // HowToSection
+      // A section with no items is a heading ("For the base"), not something to do, unless it carries text.
+      else if ([].concat(item['@type']).includes('HowToSection')) item.text && steps.push(clean(item.text));
       else if (item.text || item.name) steps.push(clean(item.text || item.name)); // HowToStep
     };
     addSteps(recipe.recipeInstructions);
@@ -125,11 +127,12 @@ export function highlightStep(stepText) {
 
   const normalize = (s) => s.toLowerCase().replace(/\s+/g, ' ').trim();
   const needle = normalize(stepText).slice(0, 50);
-  const textOf = (el) => normalize(el.innerText ?? el.textContent);
-  // The smallest element containing the step's opening words is the step itself.
+  // The smallest element containing the step's opening words is the step itself. textContent, read
+  // once per element: innerText forces layout, and recipe pages carry hundreds of comment paragraphs.
   const target = [...document.querySelectorAll('li, p')]
-    .filter((el) => textOf(el).includes(needle))
-    .sort((a, b) => textOf(a).length - textOf(b).length)[0];
+    .map((el) => ({ el, length: normalize(el.textContent).length, hit: normalize(el.textContent).includes(needle) }))
+    .filter((c) => c.hit)
+    .sort((a, b) => a.length - b.length)[0]?.el;
   if (!target) return false;
 
   target.setAttribute(ATTR, target.style.outline);

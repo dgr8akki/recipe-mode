@@ -81,6 +81,37 @@ describe('extractRecipe', () => {
     assert.equal(highlightStep(recipe.steps[0]), true);
   });
 
+  it('finds the method list when its heading shares a section with the ingredients list', () => {
+    load(`<html><head><title>Sheet-pan salmon</title></head><body>
+      <section class="recipe">
+        <h2>Ingredients</h2>
+        <ul><li>2 salmon fillets</li><li>1 lemon</li></ul>
+        <h2>Method</h2>
+        <ol><li>Heat the oven to 200C.</li><li>Roast for 12 minutes.</li></ol>
+      </section>
+    </body></html>`);
+    assert.deepEqual(extractRecipe(), {
+      title: 'Sheet-pan salmon',
+      ingredients: ['2 salmon fillets', '1 lemon'],
+      steps: ['Heat the oven to 200C.', 'Roast for 12 minutes.'],
+    });
+  });
+
+  it('does not turn a HowToSection without items into a step named after the section', () => {
+    load(
+      `<html><head>${jsonLd({
+        '@type': 'Recipe',
+        name: 'Two-part bake',
+        recipeInstructions: [
+          { '@type': 'HowToSection', name: 'For the base' },
+          { '@type': 'HowToStep', text: 'Crush the biscuits.' },
+          { '@type': 'HowToSection', name: 'For the filling', text: 'Beat the cheese with the sugar.' },
+        ],
+      })}</head><body></body></html>`,
+    );
+    assert.deepEqual(extractRecipe().steps, ['Crush the biscuits.', 'Beat the cheese with the sugar.']);
+  });
+
   it('returns null on pages without a recipe', () => {
     load('<html><head><title>News</title></head><body><h1>Headlines</h1><p>Nothing to cook.</p></body></html>');
     assert.equal(extractRecipe(), null);
@@ -112,6 +143,27 @@ describe('highlightStep', () => {
     assert.equal(highlightStep('Heat the oven to 180C.'), true);
     assert.equal(globalThis.document.getElementById('two').style.outline, '');
     assert.match(globalThis.document.getElementById('one').style.outline, /4px solid/);
+  });
+
+  it('reads layout-forcing innerText only for the element it will outline', () => {
+    load(page);
+    const proto = globalThis.window.HTMLElement.prototype;
+    const original = Object.getOwnPropertyDescriptor(proto, 'innerText');
+    const reads = [];
+    Object.defineProperty(proto, 'innerText', {
+      configurable: true,
+      get() {
+        reads.push(this.id);
+        return this.textContent;
+      },
+    });
+    try {
+      assert.equal(highlightStep('Cream the butter and sugar until light and fluffy.'), true);
+    } finally {
+      if (original) Object.defineProperty(proto, 'innerText', original);
+      else delete proto.innerText;
+    }
+    assert.ok(reads.length <= 1, `innerText read ${reads.length} times: ${reads.join(', ')}`);
   });
 
   it('clears the outline and puts back the inline one the page had', () => {

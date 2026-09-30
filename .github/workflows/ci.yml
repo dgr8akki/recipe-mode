@@ -31,3 +31,18 @@ jobs:
           name: extension
           path: dist/*.zip
           if-no-files-found: error
+
+  # Files listed in SHARED.md must match the pinned jev-shared commit. The script fetches them from
+  # raw.githubusercontent.com, so this job can only pass while that repository is readable to CI
+  # (it is private at the time of writing). No npm install: the script has no dependencies.
+  shared-drift:
+    name: Shared files match upstream
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - run: node scripts/sync-shared.js --check
