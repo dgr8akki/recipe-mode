@@ -3,13 +3,10 @@
  *
  * Jev only picks from lists built here: an action, a step, an ingredient line
  * and (when a step mentions several) which cooking time a timer is for.
- *
- * @module lib/assistant
  */
 
 import { durations } from './durations.js';
 
-/** Every intent the assistant understands, described for Jev. */
 export const ACTIONS = {
   next: 'Go to the next step',
   prev: 'Go back to the previous step',
@@ -44,7 +41,7 @@ const EARLY_OK = new Set([
  */
 const NO_ARGUMENTS = new Set(['next', 'repeat', 'stop_talking']);
 
-/** Hand-tuned against the eval suite; lower acts sooner but misfires more. */
+/** Tuned on the live check in test/live. Lower `act` and Recipe Mode jumps sooner and misfires more often. */
 export const THRESHOLDS = { act: 0.5, early: 0.8, earlyNoArgs: 0.9, complete: 0.7 };
 
 const MAX_OPTION_CHARS = 140;

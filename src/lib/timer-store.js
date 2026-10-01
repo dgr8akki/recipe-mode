@@ -8,8 +8,6 @@
  * Alarms are what make the worker wake up. Chrome delays alarms due in under
  * 30 seconds in a packed extension, so a very short timer can ring late when
  * the panel is closed; with it open, the panel's own tick is on time.
- *
- * @module lib/timer-store
  */
 
 import { Timers } from './timers.js';

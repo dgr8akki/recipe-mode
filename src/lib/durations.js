@@ -4,8 +4,6 @@
  *
  * Deterministic on purpose: Jev picks *which* time a timer is for, but the
  * number itself always comes from the text.
- *
- * @module lib/durations
  */
 
 const NUMBER_WORDS = {

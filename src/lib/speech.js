@@ -5,8 +5,6 @@
  * Prefers Chrome's on-device recognizer (Chrome 139+), which needs no network,
  * and falls back to cloud recognition. Brave ships the API surface without a
  * working backend in either mode, so it is reported as unsupported.
- *
- * @module lib/speech
  */
 
 /** Errors that only mean "nobody talked" and must not stop listening. */
@@ -16,8 +14,9 @@ const BENIGN_ERRORS = new Set(['no-speech', 'aborted']);
 const ERROR_MESSAGES = {
   'not-allowed': 'Microphone access is blocked.',
   'audio-capture': 'No microphone was found.',
-  network: "Speech recognition can't reach Google's servers and on-device recognition isn't available.",
-  'language-not-supported': 'English speech recognition is not available in this browser.',
+  network:
+    "Can't turn speech into text: Google's speech service is out of reach and this computer can't do it offline.",
+  'language-not-supported': "This browser can't recognise spoken English.",
 };
 
 /**
@@ -38,9 +37,9 @@ const ERROR_MESSAGES = {
 export function createListener({ onTranscript, onError, onStatus = () => {}, onNotice = () => {} }, lang = 'en-US') {
   const Recognition = globalThis.SpeechRecognition ?? globalThis.webkitSpeechRecognition;
   const unsupportedReason = navigator.brave
-    ? 'Brave has no working speech recognition. Use Google Chrome, or type commands instead.'
+    ? "Brave doesn't hear speech, so type your commands below, or cook with Google Chrome for voice."
     : !Recognition
-      ? 'This browser has no speech recognition. Type commands instead.'
+      ? "Voice isn't available in this browser. Type your commands below."
       : null;
 
   let recognition = null;
@@ -56,7 +55,7 @@ export function createListener({ onTranscript, onError, onStatus = () => {}, onN
     const options = { langs: [lang], processLocally: true };
     let state = await within(Recognition.available(options), 3_000, 'unavailable');
     if (state === 'downloadable' || state === 'downloading') {
-      onNotice('Downloading the on-device speech model. This happens once.');
+      onNotice('Fetching the speech model so Chrome can listen offline. Only the first time.');
       state = (await within(Recognition.install(options), 60_000, false)) ? 'available' : 'unavailable';
     }
     if (state === 'available') mode = 'on-device';
@@ -78,12 +77,12 @@ export function createListener({ onTranscript, onError, onStatus = () => {}, onN
       const text = result[0].transcript.trim();
       if (!text) return;
       const words = text.split(/\s+/).length;
-      // Interim results repeat constantly; only a new word (or the final) is news.
+      // Chrome resends the same partial many times a second; pass one on only when it grows a word or settles.
       if (!result.isFinal && words === lastWordCount) return;
       lastWordCount = result.isFinal ? 0 : words;
       onTranscript({ text, final: result.isFinal, id: `${session}:${index}` });
     };
-    // Chrome ends continuous recognition after a stretch of silence.
+    // A quiet spell (stirring, waiting for the oven) makes Chrome end the session; pick it straight back up.
     r.onend = () => {
       if (listening) tryStart(r);
     };

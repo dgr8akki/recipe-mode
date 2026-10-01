@@ -157,7 +157,7 @@ describe('panel', () => {
     await type(ctx, 'next');
     assert.equal(ctx.$('step-count').textContent, 'Step 2 of 3');
     const [entry] = activity(ctx.$);
-    assert.match(entry, /^“next” Next step in \d+ ms$/);
+    assert.match(entry, /^"next" Next step in \d+ ms$/);
     assert.equal(activity(ctx.$).length, 1, 'the pending entry was reused, not duplicated');
     assert.equal(ctx.document.body.classList.contains('thinking'), false);
     assert.equal(ctx.spoken.join(' '), `Step 2. ${recipe.steps[1].trim()}`);
@@ -167,7 +167,7 @@ describe('panel', () => {
     const ctx = await load();
     await type(ctx, 'how much butter');
     const [entry] = activity(ctx.$);
-    assert.match(entry, /^“how much butter” Read an ingredient in \d+ ms 140g butter, softened$/);
+    assert.match(entry, /^"how much butter" Read an ingredient in \d+ ms 140g butter, softened$/);
     assert.ok(ctx.$('activity').firstElementChild.querySelector('.reply'), 'reply under the command');
 
     ctx.$('next').click();
@@ -207,10 +207,27 @@ describe('panel', () => {
     });
     await type(ctx, 'next');
     const [entry] = activity(ctx.$);
-    assert.equal(entry, "“next” Can't reach ai-gateway.vercel.sh. Check your connection and try again.");
+    assert.equal(entry, '"next" Can\'t reach ai-gateway.vercel.sh. Check your connection and try again.');
     assert.ok(ctx.$('activity').firstElementChild.querySelector('.error'));
     assert.equal(ctx.spoken.join(' '), "Can't reach ai-gateway.vercel.sh. Check your connection and try again.");
     assert.equal(ctx.$('step-count').textContent, 'Step 1 of 3');
+  });
+
+  it('says in settings what leaves the browser, naming the chosen provider', async () => {
+    const { $ } = await load();
+    assert.equal(
+      $('data-note').textContent,
+      "Your words and this recipe's steps and ingredients go to ai-gateway.vercel.sh to understand commands. Nothing else does.",
+    );
+  });
+
+  it('tells the cook the buttons still work when Jev is rate-limited', async () => {
+    const ctx = await load({
+      fetchReply: () => Response.json({}, { status: 429, headers: { 'retry-after': '45' } }),
+    });
+    await type(ctx, 'next');
+    assert.match(activity(ctx.$)[0], /Jev is busy\. Buttons still work; try again in 45 s\.$/);
+    assert.equal(ctx.spoken.join(' '), 'Jev is busy. Buttons still work; try again in 45 s.');
   });
 
   it('goes back to the empty state when the recipe tab closes, keeping the activity log in view', async () => {
@@ -225,7 +242,7 @@ describe('panel', () => {
     assert.equal($('dock').hidden, true);
     assert.equal($('activity-section').hidden, false, 'there are entries, so replies have somewhere visible to go');
     await type(ctx, 'next');
-    assert.match(activity($)[0], /recipe/);
+    assert.equal(activity($)[0], "No recipe on this tab yet. Switch to the recipe page and I'll pick it up.");
   });
 
   it('acts on a confident partial once and ignores the final of the same phrase', async () => {
@@ -242,7 +259,7 @@ describe('panel', () => {
     for (let i = 0; i < 8; i++) await settle();
     assert.equal(ctx.$('step-count').textContent, 'Step 2 of 3', 'the final did not move again');
     assert.equal(activity(ctx.$).length, 1, 'one entry for the phrase, no Thinking line for its final');
-    assert.match(activity(ctx.$)[0], /^["“]next["”] Next step in \d+ ms, before you finished$/);
+    assert.match(activity(ctx.$)[0], /^"next" Next step in \d+ ms, before you finished$/);
   });
 
   it('clears the "wait for me" notice once the held command has run', async () => {

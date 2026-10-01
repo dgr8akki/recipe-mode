@@ -61,7 +61,10 @@ describe('options page', () => {
     await connect(page);
     assert.equal(page.chrome.storage.local.store.apiKey, KEY);
     assert.equal(page.$('connected').hidden, false);
-    assert.equal(page.$('connected-status').textContent, 'Key works. Open a recipe, then the Recipe Mode side panel.');
+    assert.equal(
+      page.$('connected-status').textContent,
+      'Key works. Open any recipe page and click the Recipe Mode icon.',
+    );
     assert.equal(page.$('connected-status').dataset.tone, 'ok');
     assert.equal(page.$('kicker').textContent, 'Settings');
   });
@@ -140,6 +143,12 @@ describe('options page', () => {
     page.$('api-key').dispatchEvent(new page.window.Event('input'));
     assert.equal(page.$('api-key').getAttribute('aria-invalid'), 'false');
     assert.equal(page.$('key-status').textContent, '');
+  });
+
+  it('has no hero: the page opens on the heading and the form', async () => {
+    const { document } = await load();
+    assert.equal(document.querySelector('.hero, .num'), null);
+    assert.equal(document.querySelector('h1').textContent.replace(/\s+/g, ' ').trim(), 'Recipe Mode settings');
   });
 
   it('keeps every piece of content inside a landmark', async () => {

@@ -53,7 +53,7 @@ describe('panel markup', () => {
     const settings = $('settings');
     const heading = document.getElementById(settings.getAttribute('aria-labelledby'));
     assert.equal(heading?.tagName, 'H2');
-    assert.equal(heading.textContent, 'Settings');
+    assert.equal(heading.textContent, 'Panel settings');
     assert.ok(heading.classList.contains('visually-hidden'));
   });
 
@@ -82,6 +82,11 @@ describe('panel markup', () => {
     assert.match(narrow, /grid-template-areas:\s*'time remove'\s*'label remove'/, 'the label gets its own row');
     assert.match(narrow, /#prev \.nav-label \{\s*display: none/);
     assert.equal($('prev').getAttribute('aria-label'), 'Back', 'the name survives hiding the text');
+  });
+
+  it('declares both colour schemes before the stylesheet loads', () => {
+    assert.equal(document.querySelector('meta[name="color-scheme"]')?.getAttribute('content'), 'light dark');
+    assert.ok(document.querySelector('meta[name="description"]')?.getAttribute('content'));
   });
 
   it('puts the timer rail inside a named landmark', () => {

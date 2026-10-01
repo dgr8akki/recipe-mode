@@ -1,13 +1,11 @@
 /**
  * Reads answers aloud with the browser's built-in speech synthesis, and tells
  * the listener when to ignore the microphone (it would hear us otherwise).
- *
- * @module lib/speaker
  */
 
-/** Grace period after speech ends, while the room echo dies down. */
+// Grace period after speech ends, while the room echo dies down.
 const ECHO_MS = 500;
-/** Fallback speaking-rate estimate (≈15 chars/s) in case `onend` never fires. */
+// About 15 chars a second, in case `onend` never fires.
 const MS_PER_CHAR = 70;
 /** Chrome reports our own cancel() as an error on the interrupted utterance; that is not a failure. */
 const NOT_FAILURES = new Set(['interrupted', 'canceled']);

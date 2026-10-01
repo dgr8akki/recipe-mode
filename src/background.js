@@ -11,7 +11,6 @@ try {
   // Chrome < 140: no setAccessLevel on storage.local.
 }
 
-// First install: open settings in a tab to pick a provider and connect a key.
 chrome.runtime.onInstalled.addListener(({ reason }) => {
   if (reason === 'install') chrome.runtime.openOptionsPage();
 });

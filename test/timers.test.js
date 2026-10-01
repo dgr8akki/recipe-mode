@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import { Timers, timerLabel } from '../src/lib/timers.js';
 
 describe('Timers', () => {
-  it('counts down and finishes each timer exactly once', () => {
+  it('finishes once', () => {
     let now = 0;
     const timers = new Timers({ now: () => now });
     const eggs = timers.add('Eggs', 60);
@@ -27,7 +27,7 @@ describe('Timers', () => {
     assert.equal(timers.secondsLeft(eggs), 0);
   });
 
-  it('removes timers by id or the latest one', () => {
+  it('remove and removeLatest', () => {
     const timers = new Timers({ now: () => 0 });
     const first = timers.add('First', 10);
     timers.add('Second', 10);

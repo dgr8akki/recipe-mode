@@ -1,13 +1,8 @@
-/**
- * Side panel controller: wires speech, Jev, the recipe tab and timers to the UI.
- * All decision logic lives in ../lib and is unit-tested there.
- */
-
 import { ingredientsForStep, interpret } from '../lib/assistant.js';
 import { createChime } from '../lib/chime.js';
 import { clock, durations, speakDuration } from '../lib/durations.js';
 import { getConnection, mountConnection } from '../lib/connection.js';
-import { JevError, createJevClient, sessionPauseStore } from '../lib/jev.js';
+import { JevError, PROVIDERS, createJevClient, sessionPauseStore } from '../lib/jev.js';
 import { canScan, clearHighlight, extractRecipe, highlightStep } from '../lib/page.js';
 import { createTranscriptQueue } from '../lib/queue.js';
 import { createRecentSet } from '../lib/recent.js';
@@ -21,9 +16,6 @@ const MAX_ACTIVITY = 30;
 const STOP_WORDS = /\b(stop|quiet|shut up|pause)\b/i;
 const LONG_STEP = 180; // characters; longer steps drop a size so they fit without scrolling
 const PARTIAL_DEBOUNCE_MS = 150; // recognition emits a partial per word; wait for the burst to settle
-
-// ---------------------------------------------------------------------------
-// Settings
 
 const jev = createJevClient({
   getKey: async () => (await getConnection()).apiKey,
@@ -77,9 +69,6 @@ function toggleSettings(open = $('settings').hidden) {
   $('settings-toggle').setAttribute('aria-expanded', String(open));
 }
 
-// ---------------------------------------------------------------------------
-// Recipe
-
 /** @type {import('../lib/assistant.js').Recipe | null} */
 let recipe = null;
 let step = 0;
@@ -100,7 +89,6 @@ async function loadRecipeFromActiveTab() {
   showStep(0, { announce: false });
 }
 
-/** Best effort: the tab may be gone. */
 function clearHighlightIn(tabId) {
   runInTab(tabId, clearHighlight).catch(() => {});
 }
@@ -126,13 +114,13 @@ chrome.tabs.onUpdated.addListener((_id, info, tab) => {
 loadRecipeFromActiveTab();
 
 function showStep(index, { announce = true } = {}) {
-  if (!recipe) return answer("I don't see a recipe yet. Open a recipe page first.");
+  if (!recipe) return answer("No recipe on this tab yet. Switch to the recipe page and I'll pick it up.");
   if (index < 0) return answer("You're on the first step.");
-  if (index >= recipe.steps.length) return answer('That was the last step. Enjoy your meal.');
+  if (index >= recipe.steps.length) return answer("That's the last step. Enjoy it.");
   step = index;
   render();
   runInTab(recipeTabId, highlightStep, [recipe.steps[step]]).catch(() => {});
-  if (announce) speaker.say(`Step ${step + 1}. ${recipe.steps[step]}`); // already on screen
+  if (announce) speaker.say(`Step ${step + 1}. ${recipe.steps[step]}`);
 }
 
 function render() {
@@ -144,7 +132,7 @@ function render() {
   if (!recipe) return;
 
   $('title').textContent = recipe.title;
-  $('title').title = recipe.title; // the heading clamps at two lines
+  $('title').title = recipe.title;
   $('step-count').textContent = `Step ${step + 1} of ${recipe.steps.length}`;
   $('step-text').textContent = recipe.steps[step];
   $('step-text').classList.toggle('long', recipe.steps[step].length > LONG_STEP);
@@ -152,7 +140,6 @@ function render() {
   const last = step === recipe.steps.length - 1;
   $('next-label').textContent = last ? 'Finish' : 'Next step';
   $('next').classList.toggle('last', last);
-  // One tap per cooking time in the step: the same timer "set a timer" would start.
   $('step-timers').replaceChildren(
     ...durations(recipe.steps[step]).map((time) => {
       const button = document.createElement('button');
@@ -189,9 +176,6 @@ async function runInTab(tabId, func, args = []) {
   const [injection] = await chrome.scripting.executeScript({ target: { tabId }, func, args });
   return injection?.result;
 }
-
-// ---------------------------------------------------------------------------
-// Timers
 
 const timers = new Timers();
 // Timers live in session storage with an alarm each, so they keep going when this panel closes;
@@ -236,7 +220,6 @@ function renderTimers() {
   );
 }
 
-/** "Stop" or "cancel the timer" silences finished timers. */
 function dismissFinishedTimers() {
   if (!timers.dismissFinished().length) return;
   saveTimers();
@@ -260,15 +243,10 @@ function onTick() {
 
 const chime = createChime();
 
-// ---------------------------------------------------------------------------
-// Commands
-
-/** Utterance ids already acted on, so a final does not repeat what its partial did. */
 const handled = createRecentSet(100);
-/** Activity entry of the command being handled; answers are shown under it. */
+/** Entry of the command being handled; its answers go underneath. */
 let currentEntry = null;
 
-/** Speaks an answer and shows it under the command that asked for it. */
 function answer(text) {
   speaker.say(text);
   const reply = Object.assign(document.createElement('span'), { className: 'reply', textContent: text });
@@ -279,19 +257,18 @@ function answer(text) {
 async function handle({ text, final, id }) {
   if (handled.has(id) || !connected) return;
   if (!recipe) {
-    if (final) answer("I don't see a recipe on this tab. Open a recipe page first.");
+    if (final) answer("No recipe on this tab yet. Switch to the recipe page and I'll pick it up.");
     return;
   }
 
   const started = performance.now();
-  // Something on screen the moment a command is sent; partials stay quiet until they act.
   const pending = final ? logActivity(text, 'Thinking…') : null;
   let intent;
   thinking(+1);
   try {
     intent = await interpret(jev, { transcript: text, final, recipe, step });
   } catch (error) {
-    // A partial is speculative: only a final transcript is worth an error line.
+    // Partials are guesses that may still change; report a failure only once the phrase is final.
     if (final) failed(text, error, pending);
     return;
   } finally {
@@ -315,7 +292,12 @@ async function handle({ text, final, id }) {
 
 /** Shows and speaks an error: a cook with floury hands is not looking at the panel. */
 function failed(said, error, entry = null) {
-  const message = error instanceof JevError ? error.message : 'Something went wrong. Try again.';
+  // The shared client's 429 line is right for a settings page; a cook needs to hear that the buttons still work.
+  const message = !(error instanceof JevError)
+    ? "Couldn't work that out. Say it again?"
+    : error.busy
+      ? `Jev is busy. Buttons still work; try again in ${error.retryAfter || 30} s.`
+      : error.message;
   if (!(error instanceof JevError)) console.error(error);
   if (entry) setResult(entry, message, true);
   else logActivity(said, message, true);
@@ -345,7 +327,9 @@ async function perform(intent) {
     }
     case 'amount':
       return answer(
-        intent.ingredient === null ? "I couldn't find that in the ingredients." : recipe.ingredients[intent.ingredient],
+        intent.ingredient === null
+          ? "That's not in the ingredient list. Say 'what are the ingredients' to hear them all."
+          : recipe.ingredients[intent.ingredient],
       );
     case 'all_ingredients':
       return answer(
@@ -367,7 +351,7 @@ async function perform(intent) {
     case 'timer':
       return intent.time
         ? startTimer(timerLabel(intent.time, { step, spoken: intent.timeSpoken }), intent.time.seconds)
-        : answer('For how long?');
+        : answer("How long? Say 'set a timer for 12 minutes'.");
     case 'timer_left': {
       const running = timers.running();
       return answer(
@@ -423,7 +407,7 @@ function describe(intent) {
  */
 function logActivity(said, result, isError = false) {
   const item = document.createElement('li');
-  if (said) item.append(Object.assign(document.createElement('span'), { className: 'said', textContent: `“${said}”` }));
+  if (said) item.append(Object.assign(document.createElement('span'), { className: 'said', textContent: `"${said}"` }));
   item.append(
     Object.assign(document.createElement('span'), { className: isError ? 'error' : 'result', textContent: result }),
   );
@@ -433,7 +417,6 @@ function logActivity(said, result, isError = false) {
   return item;
 }
 
-/** Replaces the outcome line of an activity entry, e.g. "Thinking…" with what happened. */
 function setResult(item, text, isError = false) {
   const span = item.querySelector('.result, .error');
   span.className = isError ? 'error' : 'result';
@@ -451,9 +434,6 @@ $('command-form').addEventListener('submit', (event) => {
   queue.push({ text, final: true, id: `typed:${typedCount++}` });
   $('command').value = '';
 });
-
-// ---------------------------------------------------------------------------
-// Microphone
 
 let partialTimer = null;
 const listener = createListener({
@@ -481,7 +461,10 @@ const listener = createListener({
     if (code === 'not-allowed') {
       chrome.tabs.create({ url: chrome.runtime.getURL('permission/permission.html') });
       $('mic').classList.add('blocked');
-      showHeard(`${message} Allow it in the tab that just opened, then start listening again.`, 'error');
+      showHeard(
+        'The microphone is still waiting for permission. Say yes in the tab Chrome opened, then press Start listening again.',
+        'error',
+      );
       return;
     }
     logActivity(null, message, true);
@@ -492,7 +475,7 @@ const listener = createListener({
     $('mic-label').textContent = listening ? 'Listening' : 'Start listening';
     if (listening) {
       $('mic').classList.remove('blocked');
-      showHeard(`Listening (${mode === 'on-device' ? 'on this device' : 'cloud'} speech recognition)`);
+      showHeard(`Listening (${mode === 'on-device' ? 'on-device' : 'cloud'})`);
     } else if (!$('mic').classList.contains('blocked')) showHeard('');
   },
   onNotice(message) {
@@ -500,7 +483,7 @@ const listener = createListener({
   },
 });
 
-/** @param {'live' | 'error'} [tone] live: words heard right now; none: a quiet status line. */
+/** @param {'live' | 'error'} [tone] */
 function showHeard(text, tone) {
   $('heard').textContent = text;
   $('heard').className = tone ? `heard ${tone}` : 'heard';
@@ -512,6 +495,13 @@ $('mic').addEventListener('click', () => {
   else listener.start();
 });
 
+/** One line on what leaves the browser, naming the host the chosen provider uses. */
+async function showDataNote() {
+  const { provider } = await getConnection();
+  $('data-note').textContent =
+    `Your words and this recipe's steps and ingredients go to ${PROVIDERS[provider].host} to understand commands. Nothing else does.`;
+}
+
 const TYPED_HINT = $('command').placeholder;
 await mountConnection($('connection'), $('open-settings'), {
   primaryClass: 'primary',
@@ -519,6 +509,7 @@ await mountConnection($('connection'), $('open-settings'), {
   onChange(isConnected) {
     connected = isConnected;
     $('connection').parentElement.classList.toggle('connected', connected);
+    showDataNote();
     if (!connected && listener.listening) listener.stop();
     if (!listener.listening) $('mic-label').textContent = connected ? 'Start listening' : 'Connect Jev for voice';
     $('command').placeholder = connected ? TYPED_HINT : 'Voice and typed commands need Jev · Connect';

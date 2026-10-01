@@ -11,7 +11,7 @@ Thanks for looking at Recipe Mode. A few things that are easy to miss.
 
 ## Voice recognition changes
 
-If you touch `ACTIONS`, the question wording or `THRESHOLDS` in `src/lib/assistant.js`, run `npm run eval` as well. It needs `TYPESAFE_API_KEY` or `AI_GATEWAY_API_KEY` in `.env` and calls the real model, so it is not part of `npm run check`. Keep it at 100%, and add a case for any new phrase you expect to work. TypeSafe answers bursts with 429 and a `Retry-After`; the runner waits and retries, so a 429 on its own is not a failure.
+If you touch `ACTIONS`, the question wording or `THRESHOLDS` in `src/lib/assistant.js`, run `npm run live` as well. It needs `TYPESAFE_API_KEY` or `AI_GATEWAY_API_KEY` in `.env` and calls the real model, so it is not part of `npm run check`. Keep it at 100%, and add a case for any new phrase you expect to work. TypeSafe answers bursts with 429 and a `Retry-After`; the runner waits and retries, so a 429 on its own is not a failure.
 
 Jev is only ever asked to choose from a list the extension built (actions, step numbers, ingredient lines, times found by `durations.js`). Do not add a question that expects it to write free text, a number or a URL.
 
@@ -25,5 +25,5 @@ Adding or removing a permission changes what the store shows users, so do it in 
 
 1. Bump `version` in `package.json` and `src/manifest.json`. A test fails if they differ.
 2. Move the `Unreleased` notes in `CHANGELOG.md` under the new version with today's date.
-3. `npm run check && npm run eval && npm run package`.
+3. `npm run check && npm run live && npm run package`.
 4. Upload `dist/recipe-mode-<version>.zip` to the Chrome Web Store and attach it to a GitHub release tagged `v<version>`.

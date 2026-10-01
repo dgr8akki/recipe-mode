@@ -3,6 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="Recipe Mode side panel: the current step in large type, ingredients, timers and voice commands."
+    />
     <title>Recipe Mode</title>
     <link rel="stylesheet" href="../theme.css" />
     <link rel="stylesheet" href="panel.css" />
@@ -26,11 +31,12 @@
     </header>
 
     <section id="settings" class="settings" aria-labelledby="settings-heading" hidden>
-      <h2 id="settings-heading" class="visually-hidden">Settings</h2>
+      <h2 id="settings-heading" class="visually-hidden">Panel settings</h2>
       <div class="connection">
         <p id="connection" role="status"></p>
         <button id="open-settings" type="button" class="btn"></button>
       </div>
+      <p id="data-note" class="data-note"></p>
       <label class="check">
         <input id="read-aloud" type="checkbox" checked />
         <span class="box" aria-hidden="true">
@@ -72,7 +78,7 @@
       </details>
 
       <section id="activity-section" class="activity" aria-labelledby="activity-heading" hidden>
-        <h2 id="activity-heading" class="label">Activity</h2>
+        <h2 id="activity-heading" class="label">What you asked</h2>
         <ol id="activity" class="activity-list" aria-live="polite"></ol>
       </section>
     </main>

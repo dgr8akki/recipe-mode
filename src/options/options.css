@@ -1,11 +1,11 @@
-/* Settings and microphone permission pages: a big title, numbered sections, square modules. */
+/* Settings and microphone permission pages. */
 
 :root {
   --pad: 48px;
 }
 
 body {
-  padding: 48px 16px;
+  padding: 24px 16px;
   background: color-mix(in srgb, var(--ink) 6%, var(--bg));
 }
 
@@ -24,7 +24,6 @@ body {
   color: var(--muted);
 }
 
-.hero,
 .section {
   display: grid;
   grid-template-columns: 4fr 8fr;
@@ -32,30 +31,25 @@ body {
   padding: 56px var(--pad);
 }
 
-.hero {
-  align-items: end;
-  border-bottom: 2px solid var(--ink);
-}
-
-.hero h1 {
-  font-size: 88px;
-  line-height: 0.95;
-  font-weight: 800;
-  letter-spacing: -0.035em;
-}
-
-.hero p {
-  max-width: 34ch;
-  font-size: 22px;
-  line-height: 1.35;
-  font-weight: 600;
-  text-wrap: pretty;
-}
-
 .section {
-  gap: 24px 32px;
-  padding: 32px var(--pad) 40px;
+  gap: 20px 32px;
+  padding: 20px var(--pad) 24px;
   border-bottom: 2px solid var(--rule);
+}
+
+.brandbar h1 {
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+}
+
+.brandbar-sub {
+  color: var(--muted);
+}
+
+.section-note {
+  color: var(--muted);
+  font-size: 16px;
 }
 
 .section-head {
@@ -64,16 +58,8 @@ body {
   gap: 8px;
 }
 
-.num {
-  font-size: 64px;
-  line-height: 1;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  color: var(--accent);
-}
-
 .section-head h2 {
-  font-size: 32px;
+  font-size: 28px;
   font-weight: 800;
   letter-spacing: -0.02em;
 }
@@ -87,9 +73,14 @@ form {
 }
 
 .intro {
-  max-width: 56ch;
-  font-size: 18px;
+  max-width: 60ch;
+  font-size: 17px;
   text-wrap: pretty;
+}
+
+.intro code {
+  font-family: inherit;
+  font-weight: 800;
 }
 
 /* Provider choice: two square cards sharing a border. */
@@ -113,8 +104,8 @@ form {
   display: flex;
   gap: 12px;
   align-items: flex-start;
-  min-height: 88px;
-  padding: 16px;
+  min-height: 72px;
+  padding: 12px 16px;
   border: 2px solid var(--rule);
   cursor: pointer;
 }
@@ -185,7 +176,7 @@ form {
   display: grid;
   grid-template-columns: 44px 1fr;
   align-items: baseline;
-  padding: 12px 0;
+  padding: 8px 0;
   border-bottom: 1px solid var(--rule);
   font-size: 17px;
   counter-increment: step;
@@ -300,7 +291,7 @@ form {
 }
 
 .footer {
-  padding: 20px var(--pad) 24px;
+  padding: 16px var(--pad) 18px;
   font-size: 14px;
   line-height: 1.5;
   color: var(--muted);
@@ -381,27 +372,10 @@ form {
     border: 0;
   }
 
-  .hero,
   .section,
   .providers,
   .permission main {
     grid-template-columns: 1fr;
-  }
-
-  .hero {
-    padding-block: 32px;
-  }
-
-  .hero h1 {
-    font-size: 48px;
-  }
-
-  .hero p {
-    font-size: 18px;
-  }
-
-  .num {
-    font-size: 40px;
   }
 
   .option + .option {

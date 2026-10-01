@@ -3,8 +3,6 @@
  * is shared while the bell rings and closed once the last beep has faded,
  * because each context holds an audio thread and output stream until it is
  * closed or collected, and a forgotten timer chimes every 20 seconds.
- *
- * @module lib/chime
  */
 
 const HZ = 880;

@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import { createTranscriptQueue } from '../src/lib/queue.js';
 
 describe('createTranscriptQueue', () => {
-  it('runs one item at a time, keeps only the newest partial and never drops finals', async () => {
+  it('one in flight; newest partial wins; finals kept', async () => {
     const seen = [];
     let release;
     const gate = new Promise((resolve) => (release = resolve));

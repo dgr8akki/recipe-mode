@@ -1,5 +1,4 @@
-/* Recipe Mode tokens, shared by the side panel, settings and permission pages.
-   Ink on warm white, square modules split by 2px rules, one signal red for "now" and "go". */
+/* Colour, type and control tokens shared by the side panel, settings and permission pages. */
 
 @font-face {
   font-family: 'Archivo';
@@ -215,7 +214,7 @@ a {
   background: var(--accent);
 }
 
-/* Status messages: icon plus text, never colour alone. options.js sets data-tone; permission.js sets a class. */
+/* Status lines carry an icon for the tone as well as a colour. options.js sets data-tone; permission.js sets a class. */
 
 .status {
   display: flex;

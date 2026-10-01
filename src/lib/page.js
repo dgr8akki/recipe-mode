@@ -1,10 +1,6 @@
 /**
- * Functions injected into the recipe tab with `chrome.scripting.executeScript`.
- *
- * Chrome serialises each function on its own, so every function here must be
- * self-contained: no imports, no references to module scope.
- *
- * @module lib/page
+ * Functions injected into the recipe tab with `chrome.scripting.executeScript`. Chrome serialises
+ * each one on its own, so nothing here may import anything or reach into module scope.
  */
 
 /**
@@ -111,12 +107,7 @@ export function clearHighlight() {
   return marked.length;
 }
 
-/**
- * Outlines the element holding a step and scrolls it into view.
- *
- * @param {string} stepText
- * @returns {boolean} Whether the step was found on the page.
- */
+/** Outlines the element holding a step and scrolls it into view. @returns {boolean} found */
 export function highlightStep(stepText) {
   const ATTR = 'data-recipe-mode-outline';
   for (const el of document.querySelectorAll(`[${ATTR}]`)) {

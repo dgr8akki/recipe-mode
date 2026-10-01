@@ -132,6 +132,12 @@ body {
     center / contain no-repeat;
 }
 
+.data-note {
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--muted); /* 5.4:1 on the drawer surface */
+}
+
 .check {
   display: flex;
   align-items: center;

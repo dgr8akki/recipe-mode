@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 import { createRecentSet } from '../src/lib/recent.js';
 
 describe('createRecentSet', () => {
-  it('remembers the last N ids and forgets the oldest', () => {
+  it('keeps the last N', () => {
     const seen = createRecentSet(3);
     for (const id of ['a', 'b', 'c']) seen.add(id);
     assert.equal(seen.has('a'), true);

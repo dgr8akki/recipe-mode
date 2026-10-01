@@ -4,13 +4,6 @@
 
 # Recipe Mode
 
-**Cook hands-free on any recipe page.** Say "next", "how much butter?" or "set a timer" while your hands are covered in flour.
-
-[![CI](https://github.com/dgr8akki/recipe-mode/actions/workflows/ci.yml/badge.svg)](https://github.com/dgr8akki/recipe-mode/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-ec3013.svg)](LICENSE)
-![Manifest V3](https://img.shields.io/badge/manifest-v3-ec3013.svg)
-![Chrome 116+](https://img.shields.io/badge/chrome-116%2B-ec3013.svg)
-
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png" />
   <img src="docs/screenshot-light.png" width="360" alt="Recipe Mode side panel on step 6 of 7 of a lemon drizzle cake: a finished 30 minute timer shown as a red Done band, two running timers with countdown bars, the step in large type, and Back, Next step and Start listening controls docked at the bottom." />
@@ -18,56 +11,25 @@
 
 </div>
 
-## Features
+Recipe Mode is a hands-free cooking assistant for Chrome. Open a recipe page, open the side panel, and the recipe is there in big type, one step at a time. Say "next", "how much butter?" or "set a timer" and it answers out loud, moves the step, and outlines the step on the page so you can glance at the screen from across the kitchen.
 
-- **Works on any recipe site.** Reads the schema.org recipe data most sites publish for search engines, with a fallback for simple pages.
-- **Talk naturally.** "What was that?", "go to the step where I pour it into the tin", "honey, pass the salt" (ignored: that wasn't for you).
-- **Answers out loud** and highlights the current step on the page, so you rarely need to look.
-- **Smart timers.** "Set a timer" uses the time in the current step, or tap **Start the 30 mins timer** under it. When a step mentions two times, it picks the one you meant. A finished timer turns into a red band at the top and chimes every 20 seconds until you dismiss it.
-- **Readable from across the kitchen.** Big type, a ruler-style progress bar, the next step previewed underneath, and big controls docked at the bottom. Light and dark themes.
-- **Fast.** Simple commands like "next" act before you finish the sentence.
-- **Private by default.** On-device speech recognition where Chrome supports it. No accounts, no analytics.
+It reads the schema.org recipe data that most recipe sites publish for search engines, so it works on sites it has never seen. Pages that only have an "Ingredients" heading and a "Method" list work too, as long as the page is simple. Cooking times are found by regex, including "1 ½ hours" and "25-30 minutes", and every step that mentions a time gets a button such as "Start the 30 mins timer". If a step says two times, it picks the one you mean.
 
-## How it works
-
-Recipe Mode is built on [Jev](https://typesafe.ai), TypeSafe's System One model. Jev doesn't generate text, it answers typed questions with probabilities, so it **never makes anything up**: every step, ingredient and time the assistant reads to you comes straight from the recipe.
-
-```mermaid
-flowchart LR
-  A[Speech, word by word] --> B[Transcript queue]
-  B --> C{Jev: one call}
-  C -->|which action?| D[next, timer, amount, ...]
-  C -->|which step?| E[Step list from the page]
-  C -->|which ingredient?| F[Ingredient lines from the page]
-  D & E & F --> G[Panel acts and speaks]
-```
-
-Each spoken phrase becomes one request carrying several questions (action, step, ingredient, and which timer if a step has several). Jev picks from lists that the extension builds from the page. Cooking times are parsed deterministically, including fractions such as "1 ½ hours" and ranges such as "25-30 minutes".
+Commands are understood by Jev, TypeSafe's System One model. Jev does not write text. It picks from lists the extension builds from the page (which action, which step, which ingredient line, which time), so nothing it tells you is made up. Simple commands like "next" act before you have finished the sentence. "Honey, pass the salt" is left alone.
 
 ## Install
 
-Recipe Mode isn't on the Chrome Web Store yet. To install from source:
+Recipe Mode is not on the Chrome Web Store yet, so for now it goes in by hand. Grab `recipe-mode-x.y.z.zip` from [Releases](https://github.com/dgr8akki/recipe-mode/releases) (or clone the repo and use its `src/` folder), then in `chrome://extensions` switch Developer mode on and choose Load unpacked. Pinning it from the puzzle-piece menu puts the icon where a floury finger can find it.
 
-1. Download the latest `recipe-mode-x.y.z.zip` from [Releases](https://github.com/dgr8akki/recipe-mode/releases) and unzip it, or clone this repo.
-2. Open `chrome://extensions` and turn on **Developer mode**.
-3. Click **Load unpacked** and select the unzipped folder (or `src/` in a clone).
-4. Pin **Recipe Mode** from the puzzle-piece menu.
+Use Google Chrome. Brave ships the speech API without a working backend, so there you can only type commands.
 
-Following a recipe, Back and Next, step timers, the ingredient list and reading aloud work straight away; the settings page that opens on install has a **Try a sample recipe** button. Voice and typed commands need Jev, so for those you need either a [TypeSafe API key](https://console.typesafe.ai/keys) or a [Vercel AI Gateway API key](https://vercel.com/docs/ai-gateway/authentication-and-byok/api-keys): pick your provider, paste the key and select **Connect**; it's checked before it's saved. Jev costs $0.042 per million input tokens (about $0.0001 per command). With Vercel, set a [spend limit](https://vercel.com/docs/ai-gateway/observability-and-spend/budgets) on the key.
+Following a recipe, Back and Next, the step timers, the ingredient list and reading aloud all work straight away, and the settings page that opens on install has a "Try a sample recipe" button. Voice and typed commands go through Jev, so for those you need a key from [TypeSafe](https://console.typesafe.ai/keys) or [Vercel AI Gateway](https://vercel.com/docs/ai-gateway/authentication-and-byok/api-keys). Choose one of the two, paste its key and Connect; Recipe Mode tries the key first and only keeps it if it works, and after that the field shows it masked. At TypeSafe's September 2026 price of $0.042 for a million input tokens, asking "how much flour?" costs about one cent per hundred questions. A Vercel key can carry a spend limit if you want a ceiling.
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/options-dark.png" />
-  <img src="docs/options-light.png" width="520" alt="The Recipe Mode settings page: a Connect Jev section with a choice between Vercel AI Gateway and TypeSafe, numbered setup steps for the chosen provider, an API key field and a Connect button." />
-</picture>
+## Cooking with it
 
-> [!NOTE]
-> Use Google Chrome. Brave ships no working speech recognition; you can still type commands there.
+Open a recipe, click the Recipe Mode icon, and the panel shows step 1. Back, Next and the timer buttons need nothing else. For voice, press Start listening; the first time, Chrome asks for the microphone in a new tab.
 
-## Usage
-
-1. Open a recipe, then click the Recipe Mode icon to open the side panel.
-2. Use **Back** and **Next**, tap a **Start the … timer** button, or open the ingredient list. None of this needs a key.
-3. For voice, connect a key: the microphone button reads **Connect Jev for voice** until you do. Then select **Start listening**. The first time, Chrome asks for microphone access in a new tab.
+These are the voice commands for cooking it understands. Everything in the table can also be typed into the box under the microphone button.
 
 | Say                                                          | What happens                                                   |
 | ------------------------------------------------------------ | -------------------------------------------------------------- |
@@ -79,41 +41,32 @@ Following a recipe, Back and Next, step timers, the ingredient list and reading 
 | "How long is left?", "cancel the timer"                      | Reads or cancels timers; a ringing timer is cancelled first    |
 | "Stop"                                                       | Stops reading, even mid-sentence, and silences finished timers |
 
-You can type any command in the box under the microphone button.
+Timers keep running when the panel is closed. Chrome shows a notification when one finishes; with the panel open it chimes and says so.
 
-## Privacy and permissions
+## When it goes wrong in the kitchen
 
-| Permission                | Why                                                                  |
-| ------------------------- | -------------------------------------------------------------------- |
-| `sidePanel`               | Shows the assistant next to the recipe                               |
-| `scripting`, `<all_urls>` | Reads the recipe on the tab you're viewing and highlights the step   |
-| `storage`                 | Keeps your API key and settings in this browser                      |
-| `alarms`, `notifications` | Rings a timer and shows a notice when the side panel is closed       |
-| Microphone                | Hears commands; audio is transcribed by the browser and never stored |
+- Timers survive the panel closing but not the browser closing. With the panel closed, a timer under 30 seconds can ring late, because Chrome does not fire alarms sooner than that.
+- While Recipe Mode is talking, a command you say is held until it finishes; only "stop" acts at once. That is how it avoids reacting to its own voice.
+- It reads the recipe from the page you open. A recipe inside an embedded video is invisible to it.
+- Commands are English only for now.
 
-While the side panel is open, Recipe Mode checks each page you view for a recipe (locally); only the recipe's steps and ingredients are ever sent. They go, with your transcript as you speak it, to TypeSafe to run Jev, directly or through Vercel AI Gateway, whichever you picked. Nothing else leaves your browser. See [PRIVACY.md](PRIVACY.md).
+Things that come up, and what to try:
+
+| Problem                                          | What to try                                                                                                                               |
+| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| "Open a recipe to start" on a recipe page        | Reload the page. Some sites publish no recipe data, and the heading fallback only copes with simple pages.                                |
+| It hears the extractor fan, not you              | Move the laptop or phone mic closer, or type the command. Kitchen noise is the main reason a phrase comes back as "Ignored".              |
+| A timer rang late with the panel closed          | Chrome fires alarms at most every 30 seconds. Timers of a minute or more are on time; for shorter ones keep the panel open.               |
+| "Jev is busy. Buttons still work; try again in…" | TypeSafe is rate-limiting. Back, Next and the timer buttons keep working; the voice comes back after the wait.                            |
+| "Your API key was rejected"                      | Select Change in the panel's settings and connect a new key. A brand-new Vercel account won't answer until a payment card is added to it. |
+| Nothing happens when you speak                   | Check that your words appear under the microphone button. If not, allow Chrome in System Settings, Privacy & Security, Microphone.        |
+| It stopped listening on its own                  | Chrome ends recognition after long silences; Recipe Mode restarts it. If it says "Listening stopped", tap the microphone once more.       |
 
 ## Development
 
-Requires Node.js 22 or later. [CONTRIBUTING.md](CONTRIBUTING.md) covers what to check before a pull request and how a release is cut.
+You'll want Node.js 22 or newer. After `npm ci`, the command to know is `npm run check`: ESLint, Prettier and the unit tests, done in about a second, and it has to be green before anything is committed. For the real model there is `npm run live`, which says fifteen kitchen phrases to Jev and waits out any rate limit; it reads its key from `.env`, as either `AI_GATEWAY_API_KEY` or `TYPESAFE_API_KEY`. CI never runs it. `npm run package` builds the upload zip from `src/` after making sure `package.json` and the manifest agree on the version, and `npm run icons` redraws the PNG icons from `assets/icon.svg` in headless Chrome.
 
-```sh
-npm install
-npm run check      # lint + format check + unit tests
-npm run eval       # live evaluation against Jev (needs TYPESAFE_API_KEY or AI_GATEWAY_API_KEY in .env)
-npm run package    # builds dist/recipe-mode-<version>.zip for the Chrome Web Store
-```
-
-| Script            | Purpose                                                     |
-| ----------------- | ----------------------------------------------------------- |
-| `npm test`        | Unit tests with `node:test`; Jev is faked, runs offline     |
-| `npm run lint`    | ESLint                                                      |
-| `npm run format`  | Prettier                                                    |
-| `npm run eval`    | Real Jev calls on 16 spoken phrases; waits out rate limits  |
-| `npm run icons`   | Renders `assets/icon.svg` to PNGs with headless Chrome      |
-| `npm run package` | Zips `src/` for upload and checks the version numbers match |
-
-### Project structure
+There is no build step: Chrome loads `src/` as plain ES modules.
 
 ```
 src/
@@ -122,7 +75,7 @@ src/
 ├── theme.css              Colour, type and button tokens shared by every page
 ├── fonts/                 Archivo (SIL OFL 1.1), bundled so nothing loads from the network
 ├── panel/                 Side panel UI (HTML, CSS, controller)
-├── options/               Pick a provider; connect, test, replace or remove the key
+├── options/               Settings: where Jev runs and the key for it, plus the sample recipe
 ├── permission/            One-time microphone permission page
 ├── demo/                  Sample recipe page, opened from settings
 └── lib/
@@ -130,37 +83,30 @@ src/
     ├── chime.js           The timer bell, on one shared AudioContext
     ├── durations.js       Finds cooking times in text ("1 ½ hours", "25-30 mins")
     ├── connection.js      "Connected via …" row; opens settings
-    ├── jev.js             Jev client for TypeSafe or Vercel: retries, rate-limit pauses, clear errors
+    ├── jev.js             Talks to Jev at either provider; retries once, backs off when rate-limited
     ├── page.js            Functions injected into the recipe tab
     ├── queue.js           One request in flight; newest partial wins
+    ├── recent.js          The last hundred utterance ids, for dedupe
     ├── speaker.js         Reads answers aloud; mutes the mic while talking
     ├── speech.js          Word-by-word speech recognition, on-device first
     ├── timer-store.js     Keeps timers in session storage with an alarm each
     └── timers.js          Kitchen timers
-test/                      Unit tests (jsdom for page functions)
-evals/                     Live evaluation against Jev
+test/                      Unit tests; test/live/ talks to the real model
 ```
 
-### Tests
+The unit tests fake Jev and use jsdom for the page functions and the panel. They cover time parsing, the intent rules, the Jev client's retry and rate-limit handling, recipe extraction from real-world JSON-LD shapes, the panel controller, the settings page and the manifest. `jev.js`, `connection.js`, `options.js`, `permission.js` and a few test files are copies from [jev-shared](https://github.com/dgr8akki/jev-shared); see [SHARED.md](SHARED.md) before editing them. [CONTRIBUTING.md](CONTRIBUTING.md) covers what to check before a pull request and how a release is cut.
 
-- **Unit tests** fake Jev and run in about a second. They cover time parsing, intent rules, the Jev client's retry and rate-limit handling, recipe extraction from real-world JSON-LD shapes, and the manifest.
-- **The live evaluation** checks that real phrases map to the right intent with the real model. It isn't part of CI because it needs a key and TypeSafe rate-limits bursts.
+## What it sends, and the permissions it asks for
 
-## Troubleshooting
+While the side panel is open, Recipe Mode checks each page you view for a recipe, on your device. Only a recipe's steps and ingredient lines are ever sent, together with your words as you speak them, to whichever provider you connected. With Vercel AI Gateway in the middle, Vercel passes the request on to TypeSafe, where Jev runs. The page's address and title never leave the browser. Audio is transcribed by Chrome (on your device where it can) and never recorded. Details are in [PRIVACY.md](PRIVACY.md).
 
-| Problem                                           | Fix                                                                                                                             |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| "Open a recipe to start" on a recipe              | Reload the page. The site may not publish recipe data; the heading fallback covers simple pages only.                           |
-| "Speech recognition can't reach Google's servers" | You're in Brave or behind a VPN that blocks Google speech. Use Chrome, or type commands.                                        |
-| "Jev is busy. Try again in 30s."                  | TypeSafe is overloaded. Wait, then repeat the command.                                                                          |
-| "Your API key was rejected"                       | Select **Change** in Settings and connect a new key. New Vercel accounts need a card on file before AI Gateway serves requests. |
-| Nothing happens when you speak                    | Check that your words appear under the button. If not, allow Chrome in macOS Privacy & Security → Microphone.                   |
-
-## Limitations
-
-- Timers keep running with the side panel closed and Chrome shows a notification when one ends, but they don't survive closing the browser. With the panel closed, a timer under 30 seconds can ring late.
-- While Recipe Mode is talking, a command you say is held until it finishes; only "stop" acts at once. That is how it avoids reacting to its own voice.
-- Reads the recipe from the page you open. It can't follow a recipe inside an embedded video.
+| Permission                | Why                                                                                              |
+| ------------------------- | ------------------------------------------------------------------------------------------------ |
+| `sidePanel`               | Shows the assistant next to the recipe                                                           |
+| `scripting`, `<all_urls>` | Reads the recipe on the tab you are viewing and outlines the step                                |
+| `storage`                 | Keeps your API key and settings in this browser                                                  |
+| `alarms`, `notifications` | Rings a timer and shows a notice when the side panel is closed                                   |
+| Microphone                | Lets you talk to it with sticky hands; Chrome turns the sound into words and nothing is recorded |
 
 ## License
 

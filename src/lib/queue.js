@@ -4,8 +4,6 @@
  * Speech recognition emits a partial transcript for every new word. While a
  * request is running, newer partials replace older queued ones (only the
  * latest wording matters); final transcripts are never dropped.
- *
- * @module lib/queue
  */
 
 /**

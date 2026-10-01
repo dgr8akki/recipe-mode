@@ -3,8 +3,6 @@
  * without waiting; the panel renders it and polls `collectFinished()`. The
  * state round-trips through `snapshot()`/`restore()` so it can live in
  * extension storage and outlast the panel (see timer-store.js).
- *
- * @module lib/timers
  */
 
 /**
@@ -48,7 +46,6 @@ export class Timers {
     return timer;
   }
 
-  /** @param {number} id */
   remove(id) {
     this.list = this.list.filter((t) => t.id !== id);
   }
@@ -91,7 +88,6 @@ export class Timers {
     return Math.max(0, (timer.endsAt - this.now()) / 1000);
   }
 
-  /** @returns {Timer[]} */
   running() {
     return this.list.filter((t) => !t.finished);
   }
@@ -104,7 +100,7 @@ export class Timers {
     return done;
   }
 
-  /** Plain data for storage. @returns {{ list: Timer[], nextId: number }} */
+  /** @returns {{ list: Timer[], nextId: number }} */
   snapshot() {
     return { list: this.list.map((t) => ({ ...t })), nextId: this.nextId };
   }
