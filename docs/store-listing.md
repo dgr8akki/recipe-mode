@@ -1,7 +1,5 @@
 # Chrome Web Store listing
 
-Repo must be public before upload; all URLs below are 404 while it is private.
-
 Copy for each Developer Dashboard field, written against `src/manifest.json` at 1.3.0. Fields with a length limit show their character count next to the limit. The permission answers describe the code as it is now, so reread them whenever the manifest's permissions move.
 
 ## Store listing tab
