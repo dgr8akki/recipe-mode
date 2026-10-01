@@ -2,7 +2,7 @@
 
 Release notes for Recipe Mode, newest at the top. Headings are the [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) ones; version numbers are [semver](https://semver.org/), so 1.x.0 means the panel can do something new and 1.x.y means it does the same things with fewer bugs.
 
-## [1.3.0] - 2026-09-30
+## [1.3.0] - 2026-10-01
 
 ### Added
 
@@ -12,6 +12,11 @@ Release notes for Recipe Mode, newest at the top. Headings are the [Keep a Chang
 
 ### Changed
 
+- Listed as "Recipe Mode: hands-free cooking", with a summary that says what it is and gives two real commands.
+- The panel's lines say what to do next. "For how long?" is now "How long? Say 'set a timer for 12 minutes'.", a missing ingredient points you at "what are the ingredients", and a rate limit says the buttons still work and when to try again instead of "Something went wrong." The log of commands is headed "What you asked", and the listening line reads "Listening (on-device)" or "Listening (cloud)".
+- The panel's settings drawer says where your words and the recipe's steps and ingredients go: the host of the provider you picked, and nowhere else.
+- The settings page is flatter: it opens on the heading and the form, so the connection card is on screen in a short window. The copy says commands run on your own key, a whole dinner's worth costs under a cent, and the step buttons and timers need no key. The line about where the key is kept and sent now sits at the top of the form, so you read it before saving a key.
+- The microphone page is headed "Let Recipe Mode hear you" and says why the prompt is on its own page and what happens to the audio.
 - Timers set by saying a time read "Your timer: 12 minutes"; only a step's own time is labelled "Step 6: …".
 - The panel scrolls rather than hiding its controls when they do not fit (200 % zoom, a short window, several timers): the dock and timer rail cap their height, and the send button for typed commands is visible at every width.
 - Every spoken word used to carry the whole recipe to Jev. The step question now offers the ten steps either side of the current one, ingredients stop at 40, and partial phrases wait 150 ms to settle before one is sent.
@@ -39,6 +44,9 @@ Release notes for Recipe Mode, newest at the top. Headings are the [Keep a Chang
 - On the settings page, focus moves to Test after connecting a key and to Replace after cancelling, rather than falling back to the top of the page once the form goes away.
 - An empty, non-JSON or incomplete 200 from the provider used to get a key saved as "Key works." The client rejects any reply that does not answer every question, the settings page also checks the test answer is one of the two it offered, and failed checks are logged to the console with their cause.
 - Offline, the panel used to show "Something went wrong." and say nothing, while the settings page printed "Failed to fetch" and blamed the key. The panel now names the host it could not reach and speaks every error for a final command, and the settings page leaves the key field alone for a network problem.
+- The recording dot's pulse now stops for people who ask for reduced motion; a more specific rule had kept it going.
+- When a readout fails, the activity log says so once instead of once per sentence.
+- In the dark theme, form controls no longer flash light before the stylesheet loads.
 - On Chrome 116–139 the background worker died at start-up because `storage.local` refuses `setAccessLevel` there, so the settings page never opened after install and `chrome://extensions` showed an error. The call is guarded.
 
 ## [1.2.0] - 2026-09-28
