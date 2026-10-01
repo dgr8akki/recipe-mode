@@ -57,7 +57,7 @@ Support: github.com/dgr8akki/recipe-mode/issues. Open source under the MIT licen
 
 ### Screenshots
 
-Five 1280x800 shots, a 440x280 tile and a 1400x560 marquee are staged under `screenshots/recipe-mode/store/` in the reports folder and need a reshoot after the layout changes in this release (tracked separately).
+Five 1280x800 shots (with 640x400 copies), a 440x280 tile and a 1400x560 marquee are under `screenshots/recipe-mode/store/` in the reports folder, retaken on 1 October 2026 against this release on a real recipe page. The README beside them has the caption for each.
 
 ### URLs
 

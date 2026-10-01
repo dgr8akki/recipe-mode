@@ -6,7 +6,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/screenshot-dark.png" />
-  <img src="docs/screenshot-light.png" width="360" alt="Recipe Mode side panel on step 6 of 7 of a lemon drizzle cake: a finished 30 minute timer shown as a red Done band, two running timers with countdown bars, the step in large type, and Back, Next step and Start listening controls docked at the bottom." />
+  <img src="docs/screenshot-light.png" width="420" alt="Recipe Mode side panel on step 5 of 8 of a lemon drizzle cake: the step's 45-50 mins timer pinned at the top at 45:00, the step in large type with a Start the 45-50 mins timer button, the next step previewed below, and Back, Next step and a Listening microphone bar docked at the bottom." />
 </picture>
 
 </div>
